@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-svc
+spec:
+  type: NodePort
+  selector:
+    run: httpd
+  ports:
+  - protocol: TCP
+    nodePort: 31688
+    port: 8080
+    targetPort: 80

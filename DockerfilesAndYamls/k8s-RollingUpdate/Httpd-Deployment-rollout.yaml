@@ -1,0 +1,16 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata: 
+  name: deployment-rollout
+spec:
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        test: httpd
+    spec:
+      containers:
+      - name: httpd-rollout-test
+        image: httpd:2.2.31
+        ports:
+        - containerPort: 80
