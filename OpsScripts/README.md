@@ -1,3 +1,2 @@
 # ShellScripts
-All kinds of shells.Such as Bash shell,csh and tcsh.
-Welcome to my github.
+All kinds of operation and maintenance scripts.Welcome to my github.
