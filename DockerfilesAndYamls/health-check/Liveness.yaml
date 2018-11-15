@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+  labels:
+    test: liveness
+  name: liveness
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: liveness
+    image: busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthcheck;sleep 20; rm -rf /tmp/healthcheck;sleep 120
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthcheck
+      initialDelaySeconds: 10
+      periodSeconds: 5

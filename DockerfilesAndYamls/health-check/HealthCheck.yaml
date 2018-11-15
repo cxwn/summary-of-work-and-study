@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata: 
+  labels:
+    test: healthcheck
+  name: healthcheck
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: healthcheck
+    image: busybox
+    args:
+    - /bin/sh
+    - -c
+    - sleep 10;exit 1
