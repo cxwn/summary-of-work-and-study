@@ -239,18 +239,18 @@ spec:
 ```
 apply文件app.v1.yaml:
 ```bash
-[root@k8s-m health-check]# kubectl apply -f app.v1.yaml
+[root@k8s-m health-check]# kubectl apply -f app.v1.yaml --record
 deployment.apps/app created
 [root@k8s-m health-check]# kubectl get pod
 NAME                  READY   STATUS    RESTARTS   AGE
-app-844b9b5bf-6mcmr   1/1     Running   0          21m
-app-844b9b5bf-6n5ht   1/1     Running   0          21m
-app-844b9b5bf-9s644   1/1     Running   0          21m
-app-844b9b5bf-d6zg9   1/1     Running   0          21m
-app-844b9b5bf-jpcvb   1/1     Running   0          21m
-app-844b9b5bf-kxxh6   1/1     Running   0          21m
-app-844b9b5bf-m2pfn   1/1     Running   0          21m
-app-844b9b5bf-wfnzt   1/1     Running   0          21m
+app-844b9b5bf-9nnrb   1/1     Running   0          2m52s
+app-844b9b5bf-b8tw2   1/1     Running   0          2m52s
+app-844b9b5bf-j2n9c   1/1     Running   0          2m52s
+app-844b9b5bf-ml8c5   1/1     Running   0          2m52s
+app-844b9b5bf-mtgr9   1/1     Running   0          2m52s
+app-844b9b5bf-n4dn8   1/1     Running   0          2m52s
+app-844b9b5bf-ppzh6   1/1     Running   0          2m52s
+app-844b9b5bf-z55d4   1/1     Running   0          2m52s
 ```
 更新到app.v2.yaml:
 ```bash
@@ -258,31 +258,63 @@ app-844b9b5bf-wfnzt   1/1     Running   0          21m
 deployment.apps/app configured
 [root@k8s-m health-check]# kubectl get pod
 NAME                  READY   STATUS              RESTARTS   AGE
-app-844b9b5bf-6mcmr   1/1     Terminating         0          22m
-app-844b9b5bf-6n5ht   1/1     Running             0          22m
-app-844b9b5bf-9s644   1/1     Running             0          22m
-app-844b9b5bf-d6zg9   1/1     Running             0          22m
-app-844b9b5bf-jpcvb   1/1     Running             0          22m
-app-844b9b5bf-kxxh6   1/1     Running             0          22m
-app-844b9b5bf-m2pfn   1/1     Running             0          22m
-app-844b9b5bf-wfnzt   1/1     Terminating         0          22m
-app-cd49b84-dkdpt     0/1     ContainerCreating   0          13s
-app-cd49b84-s64px     0/1     ContainerCreating   0          13s
-app-cd49b84-ts8dc     0/1     ErrImagePull        0          14s
-app-cd49b84-x4f95     0/1     ContainerCreating   0          14s
+app-844b9b5bf-9nnrb   1/1     Running             0          3m30s
+app-844b9b5bf-b8tw2   1/1     Running             0          3m30s
+app-844b9b5bf-j2n9c   1/1     Running             0          3m30s
+app-844b9b5bf-ml8c5   1/1     Terminating         0          3m30s
+app-844b9b5bf-mtgr9   1/1     Running             0          3m30s
+app-844b9b5bf-n4dn8   1/1     Running             0          3m30s
+app-844b9b5bf-ppzh6   1/1     Terminating         0          3m30s
+app-844b9b5bf-z55d4   1/1     Running             0          3m30s
+app-cd49b84-bxvtc     0/1     ContainerCreating   0          6s
+app-cd49b84-gkkj8     0/1     ContainerCreating   0          6s
+app-cd49b84-jfzcm     0/1     ContainerCreating   0          6s
+app-cd49b84-xl8ws     0/1     ContainerCreating   0          6s
 ```
 稍后再观察：
 ```bash
 [root@k8s-m health-check]# kubectl get pod
 NAME                  READY   STATUS    RESTARTS   AGE
-app-844b9b5bf-6n5ht   1/1     Running   0          26m
-app-844b9b5bf-9s644   1/1     Running   0          26m
-app-844b9b5bf-d6zg9   1/1     Running   0          26m
-app-844b9b5bf-jpcvb   1/1     Running   0          26m
-app-844b9b5bf-kxxh6   1/1     Running   0          26m
-app-844b9b5bf-m2pfn   1/1     Running   0          26m
-app-cd49b84-dkdpt     0/1     Running   0          4m3s
-app-cd49b84-s64px     0/1     Running   0          4m3s
-app-cd49b84-ts8dc     0/1     Running   0          4m4s
-app-cd49b84-x4f95     0/1     Running   0          4m4s
+app-844b9b5bf-9nnrb   1/1     Running   0          4m59s
+app-844b9b5bf-b8tw2   1/1     Running   0          4m59s
+app-844b9b5bf-j2n9c   1/1     Running   0          4m59s
+app-844b9b5bf-mtgr9   1/1     Running   0          4m59s
+app-844b9b5bf-n4dn8   1/1     Running   0          4m59s
+app-844b9b5bf-z55d4   1/1     Running   0          4m59s
+app-cd49b84-bxvtc     0/1     Running   0          95s
+app-cd49b84-gkkj8     0/1     Running   0          95s
+app-cd49b84-jfzcm     0/1     Running   0          95s
+app-cd49b84-xl8ws     0/1     Running   0          95s
 ```
+此刻状态全部为running，但是依然有4个Pod的READY为0/1，再看一下：
+```bash
+[root@k8s-m health-check]# kubectl get deployment app
+NAME   DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+app    8         10        4            6           7m20s
+```
+DESIRED表示期待的副本数为8，CURRENT表示当前副本数为10，UP-TO-DATE表示升级了的副本数为4，AVAILABLE表示可用的副本数为6。如果不进行更改，该状态将一直保持下去。在此，需要注意的是，Rolling Update中删除了2个旧副本，创建建了4个新副本。这里留到最后再讨论。
+
+版本回滚到v1：
+```bash
+[root@k8s-m health-check]# kubectl rollout history deployment app
+deployment.extensions/app
+REVISION  CHANGE-CAUSE
+1         kubectl apply --filename=app.v1.yaml --record=true
+2         kubectl apply --filename=app.v2.yaml --record=true
+
+[root@k8s-m health-check]# kubectl rollout undo deployment app --to-revision=1
+deployment.extensions/app
+[root@k8s-m health-check]# kubectl get pod
+NAME                  READY   STATUS    RESTARTS   AGE
+app-844b9b5bf-8qqhk   1/1     Running   0          2m37s
+app-844b9b5bf-9nnrb   1/1     Running   0          18m
+app-844b9b5bf-b8tw2   1/1     Running   0          18m
+app-844b9b5bf-j2n9c   1/1     Running   0          18m
+app-844b9b5bf-mtgr9   1/1     Running   0          18m
+app-844b9b5bf-n4dn8   1/1     Running   0          18m
+app-844b9b5bf-pqpm5   1/1     Running   0          2m37s
+app-844b9b5bf-z55d4   1/1     Running   0          18m
+```
+# 四.总结
+
+
