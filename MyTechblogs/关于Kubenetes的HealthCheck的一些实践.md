@@ -115,7 +115,8 @@ readiness   0/1     Completed   0          23m
 ```
 Liveness和Readiness是两种Health Check机制，不互相依赖，可以同时使用。
 
-2.4 Health Check在Scale Up中的应用。
+# 三.拓展
+3.1 Health Check在Scale Up中的应用。
 ```yaml
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -177,4 +178,111 @@ web-7d96585f7f-xrqwm   0/1     Running   0          3m35s
 [root@k8s-m health-check]# kubectl describe pod web
 Warning  Unhealthy  57s (x219 over 19m)  kubelet, k8s-n2    Readiness probe failed: Get http://10.244.2.61:8080/healthy: dial tcp 10.244.2.61:8080: connect: connection refused
 ```
+3.2 Health Check在滚动更新（Rolling Update）中的应用。
 
+默认情况下，在Rolling Update过程中，Kubenetes会认为容器已经准备就绪，进而会逐步替换旧副本。如果新版本的容器出现故障，那么在版本更新完成之后可能导致整个应用无法处理请求，无法对外提供服务。此类事件若发生在生产环境中，后果会非常严重。正确配置了Health Check，只有通过了Readiness探测的新副本才能添加到Service，如果没有通过探测，现有副本就不会呗替换，业务依然正常运行。
+
+接下来，我们分别创建yaml文件app.v1.yaml和app.v2.yaml:
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  replicas: 8
+  template:
+    metadata:
+      labels:
+        run: app
+    spec:
+      containers:
+      - name: app
+        image: busybox
+        args:
+        - /bin/sh
+        - -c
+        - sleep 10;touch /tmp/health-check;sleep 30000
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/health-check
+          initialDelaySeconds: 10
+          periodSeconds: 5
+```
+```yaml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  replicas: 8
+  template:
+    metadata:
+      labels:
+        run: app
+    spec:
+      containers:
+      - name: app
+        image: busybox
+        args:
+        - /bin/sh
+        - -c
+        - sleep 3000
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/health-check
+          initialDelaySeconds: 10
+          periodSeconds: 5
+```
+apply文件app.v1.yaml:
+```bash
+[root@k8s-m health-check]# kubectl apply -f app.v1.yaml
+deployment.apps/app created
+[root@k8s-m health-check]# kubectl get pod
+NAME                  READY   STATUS    RESTARTS   AGE
+app-844b9b5bf-6mcmr   1/1     Running   0          21m
+app-844b9b5bf-6n5ht   1/1     Running   0          21m
+app-844b9b5bf-9s644   1/1     Running   0          21m
+app-844b9b5bf-d6zg9   1/1     Running   0          21m
+app-844b9b5bf-jpcvb   1/1     Running   0          21m
+app-844b9b5bf-kxxh6   1/1     Running   0          21m
+app-844b9b5bf-m2pfn   1/1     Running   0          21m
+app-844b9b5bf-wfnzt   1/1     Running   0          21m
+```
+更新到app.v2.yaml:
+```bash
+[root@k8s-m health-check]# kubectl apply -f app.v2.yaml --record
+deployment.apps/app configured
+[root@k8s-m health-check]# kubectl get pod
+NAME                  READY   STATUS              RESTARTS   AGE
+app-844b9b5bf-6mcmr   1/1     Terminating         0          22m
+app-844b9b5bf-6n5ht   1/1     Running             0          22m
+app-844b9b5bf-9s644   1/1     Running             0          22m
+app-844b9b5bf-d6zg9   1/1     Running             0          22m
+app-844b9b5bf-jpcvb   1/1     Running             0          22m
+app-844b9b5bf-kxxh6   1/1     Running             0          22m
+app-844b9b5bf-m2pfn   1/1     Running             0          22m
+app-844b9b5bf-wfnzt   1/1     Terminating         0          22m
+app-cd49b84-dkdpt     0/1     ContainerCreating   0          13s
+app-cd49b84-s64px     0/1     ContainerCreating   0          13s
+app-cd49b84-ts8dc     0/1     ErrImagePull        0          14s
+app-cd49b84-x4f95     0/1     ContainerCreating   0          14s
+```
+稍后再观察：
+```bash
+[root@k8s-m health-check]# kubectl get pod
+NAME                  READY   STATUS    RESTARTS   AGE
+app-844b9b5bf-6n5ht   1/1     Running   0          26m
+app-844b9b5bf-9s644   1/1     Running   0          26m
+app-844b9b5bf-d6zg9   1/1     Running   0          26m
+app-844b9b5bf-jpcvb   1/1     Running   0          26m
+app-844b9b5bf-kxxh6   1/1     Running   0          26m
+app-844b9b5bf-m2pfn   1/1     Running   0          26m
+app-cd49b84-dkdpt     0/1     Running   0          4m3s
+app-cd49b84-s64px     0/1     Running   0          4m3s
+app-cd49b84-ts8dc     0/1     Running   0          4m4s
+app-cd49b84-x4f95     0/1     Running   0          4m4s
+```
