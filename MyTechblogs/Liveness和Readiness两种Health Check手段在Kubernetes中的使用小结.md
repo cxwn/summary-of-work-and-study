@@ -316,9 +316,11 @@ app-844b9b5bf-pqpm5   1/1     Running   0          2m37s
 app-844b9b5bf-z55d4   1/1     Running   0          18m
 ```
 # 四.总结
-4.1 Liveness和Readiness是Kubernetes中两种不同的Health Check方式，他们非常类似，但又有区别。可以两者同时使用，也可以单独使用。
+4.1 Liveness和Readiness是Kubernetes中两种不同的Health Check方式，他们非常类似，但又有区别。可以两者同时使用，也可以单独使用。具体差异在上文已经提及。
 
 4.2 在上一篇关于Rolling Update的文章中，我曾经提到滚动更新过程中的替换规则。在本文中我们依然使用了默认方式进行更新。maxSurge和maxUnavailable两个参数决定了更新过程中各个状态下的副本个数，这两个参数的默认值都是25%。更新后，总副本数=8+8\*0.25=10；可用副本数：8-8\*0.25=6。此过程中，销毁了2个副本，创建了4个新副本。
+
+4.3 在一般生产环境上线时，尽量使用Health Check来确保业务不受影响。这个过程的实现手段多样化，需要根据实际情况进行总结和选用。
 
 # 五.参考资料
 5.1 [官方文档：关于Liveness和Readiness](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/)
