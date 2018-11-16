@@ -4,4 +4,14 @@
 # 二.基本概念
 2.1 **emptyDir：**emptyDir是最基础的Volume类型。每个emptyDir Volume是主机上的一个空目录,可以被Pod中所有的容器共享。它对于容器来说是持久的，对于Pod则不是。删除容器并不会对它造成影响，只有删除整个Pod时，它才会被删除，它的生命周期与所挂载的Pod一致。
 
-2.2 **https://www.cnblogs.com/CloudMan6/p/8655279.html**
+2.2  ** 1 **
+
+https://www.cnblogs.com/CloudMan6/p/8655279.html
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+
+
+https://kubernetes.io/docs/concepts/storage/volumes/
+
+
+https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes
