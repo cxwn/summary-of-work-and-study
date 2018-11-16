@@ -326,3 +326,5 @@ app-844b9b5bf-z55d4   1/1     Running   0          18m
 5.1 [官方文档：关于Liveness和Readiness](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/)
 
 5.2 [官方文档：关于maxSurge和maxUnavailable](https://kubernetes.io/zh/docs/concepts/workloads/controllers/deployment/)
+
+5.3 [文中涉及到的代码](https://github.com/mrivandu/WorkAndStudy/tree/master/DockerfilesAndYamls/health-check)
