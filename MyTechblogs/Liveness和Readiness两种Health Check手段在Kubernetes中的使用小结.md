@@ -322,7 +322,7 @@ app-844b9b5bf-z55d4   1/1     Running   0          18m
 
 4.3 在一般生产环境上线时，尽量使用Health Check来确保业务不受影响。这个过程的实现手段多样化，需要根据实际情况进行总结和选用。
 
-# 五.参考资料
+# 五.相关资料
 5.1 [官方文档：关于Liveness和Readiness](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/)
 
 5.2 [官方文档：关于maxSurge和maxUnavailable](https://kubernetes.io/zh/docs/concepts/workloads/controllers/deployment/)
