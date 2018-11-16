@@ -1,5 +1,5 @@
 # 一.概述
-强大的自愈能力是Kubenetes这一类容器编排管理引擎的一个重要特性。通常情况下，Kubenetes通过重启发生故障的容器来实现自愈。除此之外，我们还有其他方式来实现基于Kubenetes编排的容器的健康检查吗？Liveness和Readiness就是不错的选择。
+强大的自愈能力是Kubernetes这一类容器编排管理引擎的一个重要特性。通常情况下，Kubernetes通过重启发生故障的容器来实现自愈。除此之外，我们还有其他方式来实现基于Kubernetes编排的容器的健康检查吗？Liveness和Readiness就是不错的选择。
 
 # 二.实践步骤
 2.1 系统默认的健康检查。
@@ -34,9 +34,9 @@ healthcheck   0/1     CrashLoopBackOff   3          4m52s
 [root@k8s-m health-check]# echo $?
 1
 ```
-我们可以看到，命令正常执行，返回值为1。默认情况下，Linux命令执行之后返回值为0说明命令执行成功。因为执行成功后的返回值不为0，Kubenetes默认为容器发生故障，不断重启。然而，也有不少情况是服务实际发生了故障，但是进程未退出。这种情况下，重启往往是简单而有效的手段。例如：访问web服务时显示500服务器内部错误，很多原因会造成这样的故障，重启可能就能迅速修复故障。
+我们可以看到，命令正常执行，返回值为1。默认情况下，Linux命令执行之后返回值为0说明命令执行成功。因为执行成功后的返回值不为0，Kubernetes默认为容器发生故障，不断重启。然而，也有不少情况是服务实际发生了故障，但是进程未退出。这种情况下，重启往往是简单而有效的手段。例如：访问web服务时显示500服务器内部错误，很多原因会造成这样的故障，重启可能就能迅速修复故障。
 
-2.2 在kubenetes中，可以通过Liveness探测告诉kebernetes什么时候实现重启自愈。
+2.2 在Kubernetes中，可以通过Liveness探测告诉kebernetes什么时候实现重启自愈。
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -171,7 +171,7 @@ web-7d96585f7f-q5p4d   0/1     Running   0          3m35s
 web-7d96585f7f-w6tqx   0/1     Running   0          3m35s
 web-7d96585f7f-xrqwm   0/1     Running   0          3m35s
 ```
-重点关注一下17-23行，第17行指出本案例中使用的Health Check机制为Readiness，探测方法为httpGet。Kubenetes对于该方法探测成功的判断条件时http请求返回值在200-400之间。schema指定了协议，可以为http（默认）和https。path指定访问路径，port指定端口。
+重点关注一下17-23行，第17行指出本案例中使用的Health Check机制为Readiness，探测方法为httpGet。Kubernetes对于该方法探测成功的判断条件时http请求返回值在200-400之间。schema指定了协议，可以为http（默认）和https。path指定访问路径，port指定端口。
 
 容器启动10s后开始探测，如果 http://container_ip:8080/health-check 的返回值不是200-400,表示容器没有准备就绪，不接收Service web-svc的请求。/health-check则是我们实现探测的代码。探测结果示例如下：
 ```bash
@@ -180,7 +180,7 @@ Warning  Unhealthy  57s (x219 over 19m)  kubelet, k8s-n2    Readiness probe fail
 ```
 3.2 Health Check在滚动更新（Rolling Update）中的应用。
 
-默认情况下，在Rolling Update过程中，Kubenetes会认为容器已经准备就绪，进而会逐步替换旧副本。如果新版本的容器出现故障，那么在版本更新完成之后可能导致整个应用无法处理请求，无法对外提供服务。此类事件若发生在生产环境中，后果会非常严重。正确配置了Health Check，只有通过了Readiness探测的新副本才能添加到Service，如果没有通过探测，现有副本就不会呗替换，业务依然正常运行。
+默认情况下，在Rolling Update过程中，Kubernetes会认为容器已经准备就绪，进而会逐步替换旧副本。如果新版本的容器出现故障，那么在版本更新完成之后可能导致整个应用无法处理请求，无法对外提供服务。此类事件若发生在生产环境中，后果会非常严重。正确配置了Health Check，只有通过了Readiness探测的新副本才能添加到Service，如果没有通过探测，现有副本就不会呗替换，业务依然正常运行。
 
 接下来，我们分别创建yaml文件app.v1.yaml和app.v2.yaml:
 ```yaml
