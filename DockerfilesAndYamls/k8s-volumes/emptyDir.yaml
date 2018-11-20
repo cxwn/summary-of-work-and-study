@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gysl
+spec:
+  containers:
+  - image: ubuntu:18.04
+    name: gysl-01
+    volumeMounts:
+    - mountPath: /gysl-01
+      name: gysl-volume
+    args:
+    - /bin/bash
+    - -c
+    - count=0;while [ $count -lt 10000 ];do show_time=`date +%H:%M:%S`;let count=($count+1);printf "Time:%s\t%d\n" ${show_time} ${count}>>/gysl-01/test.gysl;done;
+
+  - image: ubuntu:18.04
+    name: gysl-02
+    volumeMounts:
+    - mountPath: /gysl-02
+      name: gysl-volume
+    args:
+    - /bin/sh
+    - -c 
+    - tail -n 20 /gysl-02/test.gysl
+
+  volumes:
+  - name: gysl-volume
+    emptyDir: {}
