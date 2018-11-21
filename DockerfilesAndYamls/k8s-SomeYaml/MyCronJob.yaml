@@ -1,0 +1,15 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mycronjob
+spec:
+  schedule: "*/2 * * * *"
+  jobTemplate: 
+    spec:
+      template: 
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            command: ['echo','Hello k8s cronjob']
+          restartPolicy: OnFailure
