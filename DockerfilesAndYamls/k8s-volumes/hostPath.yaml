@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadate:
+  name: hostpath
+spec:
+  containers:
+  - image: ubuntu:18.04
+    name: hostpath
+
+
+
