@@ -1,7 +1,7 @@
 # 一.背景
 存储资源在所有计算资源中扮演着十分重要的角色，大部分业务场景下都有可能使用到各类存储资源。在Kubernetes中，系统通过Volume对集群中的容器动态或静态提供存储资源。通常情况下，我们可以认为容器或者Pod的生命周期时短暂的，当容器被销毁时，容器内部的数据也同时被清除。为了持久化保存容器的数据，Kubernetes引入了Volume，类似于Docker的Volume(Docker also has a concept of volumes, though it is somewhat looser and less managed. In Docker, a volume is simply a directory on disk or in another Container. Lifetimes are not managed and until very recently there were only local-disk-backed volumes. Docker now provides volume drivers, but the functionality is very limited for now)。这个Volume被某个Pod挂载之后，这个Pod里面的所有容器都能使用这个Volume。Kubernetes目前支持的volume类型可以参考文末官方资料。
 
-# 二.几种Volume使用举例
+# 二.两种Volume使用举例
 ## 2.1 emptyDir
 
 **emptyDir：**emptyDir是最基础的Volume类型。每个emptyDir Volume是主机上的一个空目录,可以被Pod中所有的容器共享。它对于容器来说是持久的，对于Pod则不是。删除容器并不会对它造成影响，只有删除整个Pod时，它才会被删除，它的生命周期与所挂载的Pod一致。简而言之，emptyDir类型的Volume在Pod分配到Node上时被创建，Kubernetes会在Node主机上自动分配一个目录，因此无需指定Node主机上对应的目录文件。 这个目录的初始内容为空，当Pod从Node上移除时，emptyDir中的数据会被永久删除。emptyDir主要用于一些无需永久保留的数据，例如临时目录，多容器共享目录等。我们通过实际案例来理解一下，Pod gysl的yaml如下：
@@ -129,9 +129,16 @@ total 12
 
 2.3 **persistentVolume：**简称PV，是外部系统张的独立的一块存储空间，由管理员创建和维护。
 
-# 五.相关资料
+# 三.总结
+3.1 在volume的配置过程中，涉及到具体挂载路径的需要按照一定的规则来配置。例如：文件或目录需要写绝对路径。不按照规则来配置，会出现以下报错：
+```
+Warning  Failed     8s (x3 over 20s)  kubelet, k8s-n1    Error: Error response from daemon: create ~/gysl: "~/gysl-dir" includes invalid characters for a local volume name, only "[a-zA-Z0-9][a-zA-Z0-9_.-]" are allowed. If you intended to pass a host directory, use absolute path
+```
+3.2 emptyDir和hostPath都是比较常见的两种类型的volume，在使用时需要根据具体情况进行配置。其他类型的volume可参考以上两种类型及官方文档进行配置，相关官方文档会在文末给出。
+
+# 四.相关资料
 5.1 [Volumes基本概念](https://kubernetes.io/docs/concepts/storage/volumes/)
 
 5.2 [Kubernetes支持的Volume类型](https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes)
 
-5.3 [PV基本概念](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+5.3 [文章涉及到的YAML文件](https://github.com/mrivandu/WorkAndStudy/tree/master/DockerfilesAndYamls/k8s-Volumes)
