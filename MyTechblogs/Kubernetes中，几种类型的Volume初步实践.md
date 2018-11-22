@@ -91,7 +91,7 @@ spec:
 -rw-r--r-- 1 root root 16 11月 21 20:31 gysl-02
 drwxr-xr-x 2 root root 51 11月 21 20:32 gysl-dir
 ```
-文件的内容如下：
+两个文件的内容如下：
 ```bash
 [root@k8s-n1 ~]# cat gysl-01
 This is gysl-01
