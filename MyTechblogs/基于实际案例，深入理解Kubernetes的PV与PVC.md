@@ -13,8 +13,66 @@ Kubernetes通过Volume提供了良好的数据持久化方案，解决了一些�
 [root@k8s-m ~]# systemctl enable rpcbind
 [root@k8s-m ~]# systemctl start nfs
 [root@k8s-m ~]# systemctl enable nfs
+[root@k8s-m k8s-PV-PVC]# showmount -e
+Export list for k8s-m:
+/nfs *
 ```
 ## 2.2 创建PV
+创建名称为gysl-pv的PV的YAML文件如下：
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gysl-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs
+  nfs:
+    path: /nfs/gysl-pv
+    server: 172.31.3.11
+```
+执行创建并查看新建的PV详情：
+```bash
+[root@k8s-m k8s-PV-PVC]# kubectl apply -f pv.yaml
+persistentvolume/gysl-pv created
+[root@k8s-m k8s-PV-PVC]# kubectl get persistentvolume
+NAME      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+gysl-pv   1Gi        RWO            Recycle          Available           nfs                     28s
+```
+## 2.3 创建PVC
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gysl-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs
+```
+```bash
+[root@k8s-m k8s-PV-PVC]# kubectl apply -f pvc.yaml
+persistentvolumeclaim/gysl-pvc created
+[root@k8s-m k8s-PV-PVC]# kubectl get pvc
+NAME       STATUS   VOLUME    CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+gysl-pvc   Bound    gysl-pv   1Gi        RWO            nfs            48s
+```
+## 2.4 使用存储
 ```yaml
 
 ```
+```bash
+[root@k8s-m k8s-pv-pvc]# kubectl apply -f pod-pvc.yaml
+pod/gysl-pod-pvc created
+```
+# 四.相关资料
+4.1 [NFS相关](https://blog.csdn.net/solaraceboy/article/details/78743563)
+
+4.2 [PV相关官方文档](https://kubernetes.io/docs/concepts/storage/persistent-volumes)
