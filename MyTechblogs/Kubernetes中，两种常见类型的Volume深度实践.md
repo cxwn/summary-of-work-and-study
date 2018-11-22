@@ -4,7 +4,7 @@
 # 二.两种Volume使用举例
 ## 2.1 emptyDir
 
-**emptyDir：**emptyDir是最基础的Volume类型。每个emptyDir Volume是主机上的一个空目录,可以被Pod中所有的容器共享。它对于容器来说是持久的，对于Pod则不是。删除容器并不会对它造成影响，只有删除整个Pod时，它才会被删除，它的生命周期与所挂载的Pod一致。简而言之，emptyDir类型的Volume在Pod分配到Node上时被创建，Kubernetes会在Node主机上自动分配一个目录，因此无需指定Node主机上对应的目录文件。 这个目录的初始内容为空，当Pod从Node上移除时，emptyDir中的数据会被永久删除。emptyDir主要用于一些无需永久保留的数据，例如临时目录，多容器共享目录等。我们通过实际案例来理解一下，Pod gysl的yaml如下：
+**emptyDir：** emptyDir是最基础的Volume类型。每个emptyDir Volume是主机上的一个空目录,可以被Pod中所有的容器共享。它对于容器来说是持久的，对于Pod则不是。删除容器并不会对它造成影响，只有删除整个Pod时，它才会被删除，它的生命周期与所挂载的Pod一致。简而言之，emptyDir类型的Volume在Pod分配到Node上时被创建，Kubernetes会在Node主机上自动分配一个目录，因此无需指定Node主机上对应的目录文件。 这个目录的初始内容为空，当Pod从Node上移除时，emptyDir中的数据会被永久删除。emptyDir主要用于一些无需永久保留的数据，例如临时目录，多容器共享目录等。我们通过实际案例来理解一下，Pod gysl的yaml如下：
 ```yaml
 apiVersion: v1
 kind: Pod
