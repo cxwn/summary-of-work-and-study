@@ -1,11 +1,31 @@
 apiVersion: v1
 kind: Pod
-metadate:
-  name: hostpath
+metadata:
+  name: gysl-hostpath
 spec:
+  nodeSelector: 
+    role: test
   containers:
   - image: ubuntu:18.04
-    name: hostpath
-
-
-
+    name: gysl-hostpath-container
+    volumeMounts:
+    - mountPath: /etc/gysl-test-01
+      name: gysl-02
+    - mountPath: /etc/gysl-test-02
+      name: gysl-01
+    - mountPath: /gysl-test-dir
+      name: gysl-dir
+    args:
+    - /bin/bash
+    - -c 
+    - cat /etc/gysl-test-01 /etc/gysl-test-02;ls -l /gysl-test-dir;sleep 3600
+  volumes:
+  - hostPath: 
+      path: /root/gysl-01
+    name: gysl-01
+  - hostPath:
+      path: /root/gysl-02
+    name: gysl-02
+  - hostPath:
+      path: /root/gysl-dir
+    name: gysl-dir
