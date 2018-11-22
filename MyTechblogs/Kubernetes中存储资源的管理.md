@@ -49,7 +49,83 @@ This is a test file.
 该例中，我们创建了一个名为gysl的Pod，这个pod里面包含gysl-01和gysl-02两个容器，这两个容器同时挂载了名为gysl-volume的emptyDir，gysl-01的挂载点为/gysl-01，gysl-02的挂载点为gysl-02，容器gysl-01创建了一个test.gysl的文件，内容为：“This is a test file.”在容器gysl-02中，成功显示了gysl-01创建的文件的内容。
 
 
-2.2  **hostPath：**hostPath的主要作用是将主机的文件或目录挂载给Pod的容器使用，使得容器能以较为良好的性能来存储数据。
+2.2  **hostPath：**hostPath的主要作用是将主机的文件或目录挂载给Pod的容器使用，使得容器能以较为良好的性能来存储数据。接下来我们以Pod gysl-hostpath为例来理解一下hostPath的相关概念，YAML文件如下：
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gysl-hostpath
+spec:
+  nodeSelector: 
+    role: test
+  containers:
+  - image: ubuntu:18.04
+    name: gysl-hostpath-container
+    volumeMounts:
+    - mountPath: /etc/gysl-test-01
+      name: gysl-02
+    - mountPath: /etc/gysl-test-02
+      name: gysl-01
+    - mountPath: /gysl-test-dir
+      name: gysl-dir
+    args:
+    - /bin/bash
+    - -c 
+    - cat /etc/gysl-test-01 /etc/gysl-test-02;ls -l /gysl-test-dir;sleep 3600
+  volumes:
+  - hostPath: 
+      path: /root/gysl-01
+    name: gysl-01
+  - hostPath:
+      path: /root/gysl-02
+    name: gysl-02
+  - hostPath:
+      path: /root/gysl-dir
+    name: gysl-dir
+```
+在Node k8s-n1的/root目录下创建如下文件和目录：
+```bash
+[root@k8s-n1 ~]# ll
+总用量 8
+-rw-r--r-- 1 root root 16 11月 21 20:31 gysl-01
+-rw-r--r-- 1 root root 16 11月 21 20:31 gysl-02
+drwxr-xr-x 2 root root 51 11月 21 20:32 gysl-dir
+```
+文件的内容如下：
+```bash
+[root@k8s-n1 ~]# cat gysl-01
+This is gysl-01
+[root@k8s-n1 ~]# cat gysl-02
+This is gysl-02
+```
+目录gysl-dir的内容如下：
+```bash
+[root@k8s-n1 ~]# ll gysl-dir/
+总用量 12
+-rw-r--r-- 1 root root 16 11月 21 20:32 gysl-01
+-rw-r--r-- 1 root root 16 11月 21 20:32 gysl-02
+-rw-r--r-- 1 root root 16 11月 21 20:32 gysl-03
+```
+给Node k8s-n1指定一个标签，apply 该Pod：
+```bash
+[root@k8s-m k8s-Volumes]# kubectl label node k8s-n1 role=test
+node/k8s-n1 labeled
+[root@k8s-m k8s-Volumes]# kubectl apply -f hostPath.yaml
+pod/gysl-hostpath created
+[root@k8s-m k8s-Volumes]# kubectl get pod -o wide
+NAME            READY   STATUS    RESTARTS   AGE   IP             NODE     NOMINATED NODE
+gysl-hostpath   1/1     Running   0          17s   10.244.1.177   k8s-n1   <none>
+[root@k8s-m k8s-Volumes]# kubectl logs gysl-hostpath
+This is gysl-02
+This is gysl-01
+total 12
+-rw-r--r-- 1 root root 16 Nov 21 12:32 gysl-01
+-rw-r--r-- 1 root root 16 Nov 21 12:32 gysl-02
+-rw-r--r-- 1 root root 16 Nov 21 12:32 gysl-03
+```
+这个例子中，我把名为gysl-02的hostPath文件挂载到了容器的文件/etc/gysl-test-01上，把名为gysl-01的hostPath文件挂载到了容器的文件/etc/gysl-test-02上，把名为gysl-dir的hostPath目录挂载到了/gysl-test-dir下。通过logs命令，我们不难发现，目标已经达成。
+
+这种挂载方式比emptyDir更为持久，除非所在Node发生故障。不过，除了挂载一些配置文件，二进制文件之外，一般不采用该类挂载方式，因为这样的挂载操作增加了Pod文件与Node主机文件的耦合，不利于统一管理。
 
 2.3 **persistentVolume：**简称PV，是外部系统张的独立的一块存储空间，由管理员创建和维护。
 
