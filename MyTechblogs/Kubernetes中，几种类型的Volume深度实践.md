@@ -48,8 +48,8 @@ This is a test file.
 ```
 该例中，我们创建了一个名为gysl的Pod，这个pod里面包含gysl-01和gysl-02两个容器，这两个容器同时挂载了名为gysl-volume的emptyDir，gysl-01的挂载点为/gysl-01，gysl-02的挂载点为gysl-02，容器gysl-01创建了一个test.gysl的文件，内容为：“This is a test file.”在容器gysl-02中，成功显示了gysl-01创建的文件的内容。
 
-
-2.2  **hostPath：**hostPath的主要作用是将主机的文件或目录挂载给Pod的容器使用，使得容器能以较为良好的性能来存储数据。接下来我们以Pod gysl-hostpath为例来理解一下hostPath的相关概念，YAML文件如下：
+## 2.2  hostPath
+**hostPath：** hostPath的主要作用是将主机的文件或目录挂载给Pod的容器使用，使得容器能以较为良好的性能来存储数据。接下来我们以Pod gysl-hostpath为例来理解一下hostPath的相关概念，YAML文件如下：
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -125,7 +125,7 @@ total 12
 ```
 这个例子中，我把名为gysl-02的hostPath文件挂载到了容器的文件/etc/gysl-test-01上，把名为gysl-01的hostPath文件挂载到了容器的文件/etc/gysl-test-02上，把名为gysl-dir的hostPath目录挂载到了/gysl-test-dir下。通过logs命令，我们不难发现，目标已经达成。
 
-这种挂载方式比emptyDir更为持久，除非所在Node发生故障。不过，除了挂载一些配置文件，二进制文件之外，一般不采用该类挂载方式，因为这样的挂载操作增加了Pod文件与Node主机文件的耦合，不利于统一管理。
+这种挂载方式比emptyDir更为持久，除非所在Node发生故障。不过，除了挂载一些配置文件/二进制文件之外，一般不采用该类挂载方式，因为这样的挂载操作增加了Pod文件与Node主机文件的耦合，不利于统一管理。
 
 2.3 **persistentVolume：**简称PV，是外部系统张的独立的一块存储空间，由管理员创建和维护。
 
