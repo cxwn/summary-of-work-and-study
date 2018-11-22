@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gysl-pod-pvc
+spec:
+  containers:
+  - name: container-pvc
+    image: ubuntu:18.04
+    args:
+    - /bin/bash
+    - -c
+    - echo "This is a test about pvc." >/gysl-pvc/gysl-pvc.txt;sleep 36000
+    volumeMounts:
+    - mountPath: "/gysl-pvc"
+      name: gysl-pvc-test
+  volumes:
+    - name: gysl-pvc-test
+      persistentVolumeClaim:
+        claimName: gysl-pvc
