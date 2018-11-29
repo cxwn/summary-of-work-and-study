@@ -8,7 +8,10 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Recycle
-  storageClassName: nfs
+  storageClassName: slow
+  mountOptions:
+    - hard
+    - nfsvers=4.1
   nfs:
-    path: /nfs/gysl-pv
+    path: /nfs
     server: 172.31.3.11

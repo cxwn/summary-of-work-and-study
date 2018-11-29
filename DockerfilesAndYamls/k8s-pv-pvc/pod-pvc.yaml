@@ -7,7 +7,7 @@ spec:
   - name: container-pvc
     image: ubuntu:18.04
     args:
-    - /bin/bash
+    - /bin/sh
     - -c
     - echo "This is a test about pvc." >/gysl-pvc/gysl-pvc.txt;sleep 36000
     volumeMounts:
