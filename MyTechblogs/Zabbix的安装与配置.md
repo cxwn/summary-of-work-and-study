@@ -184,7 +184,7 @@ success
 正在升级/安装...
    1:zabbix-release-4.0-1.el7         ################################# [100%]
 ```
-### 3.1.2 安装 zabbix-server-mysql、zabbix-web-mysql 、zabbix-agent 及 MySQL
+### 3.1.2 安装 zabbix-server-mysql、zabbix-web-mysql 及zabbix-agent
 ```bash
 [root@zabbix ~]# yum install -y zabbix-server-mysql zabbix-web-mysql zabbix-agent
 已安装:
@@ -202,10 +202,36 @@ success
   t1lib.x86_64 0:5.1.2-14.el7                trousers.x86_64 0:0.3.14-2.el7             unixODBC.x86_64 0:2.3.1-11.el7                 zabbix-web.noarch 0:4.0.2-1.el7
 完毕！
 ```
-zai
+### 3.1.3 安装mariadb（MySQL）
+在某些CentOS版本中，MySQL已经被替换为mariadb，mariadb完全兼容MySQL，并且不存在法律风险，是MySQL良好的替代品。当然，如果要安装MySQL，那么也是没有问题的，我之前的博文有关各类MySQL的安装教程，可供参考。由于实验环境资源有限，本人把 mariadb 也安装在了与 Zabbix Server 相同的主机上。生产环境的话还是尽量把数据库独立处理安装与配置。 
+```bash
+[root@zabbix ~]# yum -y install mariadb-server
+已安装:
+  mariadb-server.x86_64 1:5.5.60-1.el7_5
+作为依赖被安装:
+  mariadb.x86_64 1:5.5.60-1.el7_5
+完毕！
+[root@zabbix ~]# systemctl start mariadb
+[root@zabbix ~]# systemctl enable mariadb
+Created symlink from /etc/systemd/system/multi-user.target.wants/mariadb.service to /usr/lib/systemd/system/mariadb.service.
+```
 ### 3.1.3 数据库初始化
 ```bash
-
+[root@zabbix ~]# mysql -uroot -p
+MariaDB [(none)]> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| test               |
+| zabbix             |
++--------------------+
+MariaDB [(none)]> grant all privileges on zabbix.* to zabbix@localhost identified by 'zabbix.gysl';
+MariaDB [(none)]> SET PASSWORD FOR 'root'@'localhost' = PASSWORD('zabbix.gysl');
+MariaDB [(none)]> quit
+Bye
 ```
 ```bash
 [root@zabbix ~]# systemctl stop firewalld
