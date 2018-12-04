@@ -215,9 +215,10 @@ success
 [root@zabbix ~]# systemctl enable mariadb
 Created symlink from /etc/systemd/system/multi-user.target.wants/mariadb.service to /usr/lib/systemd/system/mariadb.service.
 ```
-### 3.1.3 数据库初始化
+### 3.1.3 创建相关数据库并设置
 ```bash
 [root@zabbix ~]# mysql -uroot -p
+MariaDB [(none)]> create database zabbix character set utf8 collate utf8_bin;
 MariaDB [(none)]> show databases;
 +--------------------+
 | Database           |
@@ -228,11 +229,56 @@ MariaDB [(none)]> show databases;
 | test               |
 | zabbix             |
 +--------------------+
+MariaDB [(none)]> show variables like 'character_set_database';
++------------------------+--------+
+| Variable_name          | Value  |
++------------------------+--------+
+| character_set_database | latin1 |
++------------------------+--------+
+1 row in set (0.00 sec)
 MariaDB [(none)]> grant all privileges on zabbix.* to zabbix@localhost identified by 'zabbix.gysl';
+MariaDB [(none)]> flush privileges;
+Query OK, 0 rows affected (0.00 sec)
 MariaDB [(none)]> SET PASSWORD FOR 'root'@'localhost' = PASSWORD('zabbix.gysl');
 MariaDB [(none)]> quit
 Bye
 ```
+Mariadb 安装完成之后默认无密码，在提示输入密码那一步直接按回车键即可登入。等入数据库之后，创建了数据库zabbix，授予所有的权限并设置密码。最后顺便给mariadb设置了密码。
+### 3.1.4 修改相关配置
+```bash
+[root@zabbix ~]# sed -i.bak '/^DBUser/a DBPassword=zabbix.gysl' /etc/zabbix/zabbix_server.conf
+[root@zabbix ~]# cat /etc/zabbix/zabbix_server.conf |grep -v ^#|grep ^"\S"
+LogFile=/var/log/zabbix/zabbix_server.log
+LogFileSize=0
+PidFile=/var/run/zabbix/zabbix_server.pid
+SocketDir=/var/run/zabbix
+DBName=zabbix
+DBUser=zabbix
+DBPassword=zabbix.gysl
+SNMPTrapperFile=/var/log/snmptrap/snmptrap.log
+Timeout=4
+AlertScriptsPath=/usr/lib/zabbix/alertscripts
+ExternalScripts=/usr/lib/zabbix/externalscripts
+LogSlowQueries=3000
+```
+### 3.1.5 数据初始化
+```bash
+[root@zabbix ~]# zcat /usr/share/doc/zabbix-server-mysql*/create.sql.gz | mysql -uzabbix -p zabbix
+Enter password:
+[root@zabbix ~]# mysql -u zabbix -p
+Enter password:
+MariaDB [(none)]> use zabbix;
+MariaDB [zabbix]> show tables;
+144 rows in set (0.00 sec)
+MariaDB [zabbix]> exit
+Bye
+```
+输入之前我们设置的密码，回车键稍后即可。144张表，确认无误。
+### 3.1.6 修改时区
+```bash
+[root@zabbix ~]# sed -i.bak '/Europe\/Riga/a \tphp_value date.timezone Asia/Shanghai' /etc/httpd/conf.d/zabbix.conf
+```
+### 3.1.7 完成最后设置并重启服务器
 ```bash
 [root@zabbix ~]# systemctl stop firewalld
 [root@zabbix ~]# systemctl disable firewalld
@@ -242,4 +288,9 @@ Removed symlink /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.
 [root@zabbix ~]# systemctl enable httpd
 Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
 [root@zabbix ~]# sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+[root@zabbix ~]# systemctl restart zabbix-server zabbix-agent
+[root@zabbix ~]# systemctl enable zabbix-server zabbix-agent
+Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-server.service to /usr/lib/systemd/system/zabbix-server.service.
+Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.service to /usr/lib/systemd/system/zabbix-agent.service.
+[root@zabbix ~]# reboot
 ```
