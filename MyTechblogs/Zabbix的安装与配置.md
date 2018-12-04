@@ -184,7 +184,7 @@ success
 正在升级/安装...
    1:zabbix-release-4.0-1.el7         ################################# [100%]
 ```
-### 3.1.2 安装 zabbix-server-mysql、zabbix-web-mysql 及 zabbix-agent
+### 3.1.2 安装 zabbix-server-mysql、zabbix-web-mysql 、zabbix-agent 及 MySQL
 ```bash
 [root@zabbix ~]# yum install -y zabbix-server-mysql zabbix-web-mysql zabbix-agent
 已安装:
@@ -202,6 +202,7 @@ success
   t1lib.x86_64 0:5.1.2-14.el7                trousers.x86_64 0:0.3.14-2.el7             unixODBC.x86_64 0:2.3.1-11.el7                 zabbix-web.noarch 0:4.0.2-1.el7
 完毕！
 ```
+zai
 ### 3.1.3 数据库初始化
 ```bash
 
