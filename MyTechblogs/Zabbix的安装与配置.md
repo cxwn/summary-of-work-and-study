@@ -176,7 +176,7 @@ success
 ```bash
 [root@zabbix ~]# rpm -ivh https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
 ```
-如果这一步无法正常执行，那么我们还可以去link[官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)下载相关repo的rpm包进行安装。
+如果这一步无法正常执行，那么我们还可以去[官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)下载相关repo的rpm包进行安装。
 ```bash
 [root@zabbix ~]# rpm -ivh zabbix-release-4.0-1.el7.noarch.rpm
 警告：zabbix-release-4.0-1.el7.noarch.rpm: 头V4 RSA/SHA512 Signature, 密钥 ID a14fe591: NOKEY
