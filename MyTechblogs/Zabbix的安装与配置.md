@@ -170,3 +170,49 @@ success
 [root@httpd ~]# firewall-cmd --reload
 success
 ```
+# 三.安装与配置过程
+## 3.1 安装与配置 Zabbix Server
+### 3.1.1 安装仓库配置包
+```bash
+[root@zabbix ~]# rpm -ivh https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
+```
+如果这一步无法正常执行，那么我们还可以去link[官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)下载相关repo的rpm包进行安装。
+```bash
+[root@zabbix ~]# rpm -ivh zabbix-release-4.0-1.el7.noarch.rpm
+警告：zabbix-release-4.0-1.el7.noarch.rpm: 头V4 RSA/SHA512 Signature, 密钥 ID a14fe591: NOKEY
+准备中...                          ################################# [100%]
+正在升级/安装...
+   1:zabbix-release-4.0-1.el7         ################################# [100%]
+```
+### 3.1.2 安装 zabbix-server-mysql、zabbix-web-mysql 及 zabbix-agent
+```bash
+[root@zabbix ~]# yum install -y zabbix-server-mysql zabbix-web-mysql zabbix-agent
+已安装:
+  zabbix-agent.x86_64 0:4.0.2-1.el7                     zabbix-server-mysql.x86_64 0:4.0.2-1.el7                     zabbix-web-mysql.noarch 0:4.0.2-1.el7
+作为依赖被安装:
+  OpenIPMI-libs.x86_64 0:2.0.23-2.el7        OpenIPMI-modalias.x86_64 0:2.0.23-2.el7    apr.x86_64 0:1.4.8-3.el7_4.1                   apr-util.x86_64 0:1.5.2-6.el7
+  dejavu-fonts-common.noarch 0:2.33-6.el7    dejavu-sans-fonts.noarch 0:2.33-6.el7      fontpackages-filesystem.noarch 0:1.44-8.el7    fping.x86_64 0:3.10-1.el7
+  gnutls.x86_64 0:3.3.26-9.el7               httpd.x86_64 0:2.4.6-80.el7.centos         httpd-tools.x86_64 0:2.4.6-80.el7.centos       iksemel.x86_64 0:1.4-2.el7.centos
+  libX11.x86_64 0:1.6.5-1.el7                libX11-common.noarch 0:1.6.5-1.el7         libXau.x86_64 0:1.0.8-2.1.el7                  libXpm.x86_64 0:3.5.12-1.el7
+  libevent.x86_64 0:2.0.21-4.el7             libjpeg-turbo.x86_64 0:1.2.90-5.el7        libpng.x86_64 2:1.5.13-7.el7_2                 libtool-ltdl.x86_64 0:2.4.2-22.el7_3
+  libxcb.x86_64 0:1.12-1.el7                 libxslt.x86_64 0:1.1.28-5.el7              libzip.x86_64 0:0.10.1-8.el7                   mailcap.noarch 0:2.1.41-2.el7
+  net-snmp-libs.x86_64 1:5.7.2-32.el7        nettle.x86_64 0:2.7.1-8.el7                php.x86_64 0:5.4.16-45.el7                     php-bcmath.x86_64 0:5.4.16-45.el7
+  php-cli.x86_64 0:5.4.16-45.el7             php-common.x86_64 0:5.4.16-45.el7          php-gd.x86_64 0:5.4.16-45.el7                  php-ldap.x86_64 0:5.4.16-45.el7
+  php-mbstring.x86_64 0:5.4.16-45.el7        php-mysql.x86_64 0:5.4.16-45.el7           php-pdo.x86_64 0:5.4.16-45.el7                 php-xml.x86_64 0:5.4.16-45.el7
+  t1lib.x86_64 0:5.1.2-14.el7                trousers.x86_64 0:0.3.14-2.el7             unixODBC.x86_64 0:2.3.1-11.el7                 zabbix-web.noarch 0:4.0.2-1.el7
+完毕！
+```
+### 3.1.3 数据库初始化
+```bash
+
+```
+```bash
+[root@zabbix ~]# systemctl stop firewalld
+[root@zabbix ~]# systemctl disable firewalld
+Removed symlink /etc/systemd/system/multi-user.target.wants/firewalld.service.
+Removed symlink /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.
+[root@zabbix ~]# systemctl start httpd
+[root@zabbix ~]# systemctl enable httpd
+Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
+[root@zabbix ~]# sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+```
