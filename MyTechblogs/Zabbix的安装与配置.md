@@ -171,7 +171,7 @@ success
 success
 ```
 # 三.安装与配置过程
-## 3.1 安装与配置 Zabbix Server
+## 3.1 Zabbix Server 的安装与配置 
 ### 3.1.1 安装仓库配置包
 ```bash
 [root@zabbix ~]# rpm -ivh https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/zabbix-release-4.0-1.el7.noarch.rpm
@@ -294,3 +294,6 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-server.s
 Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.service to /usr/lib/systemd/system/zabbix-agent.service.
 [root@zabbix ~]# reboot
 ```
+重启之后如果无其他异常，那么 Zabbix Server 已经正常运行，等待进一步配置。
+## 3.2 配置 Zabbix Web 
+在浏览器地址栏输入：http://10.1.1.21/zabbix （http://server_ip_or_name/zabbix）后按下回车键。 
