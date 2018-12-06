@@ -151,6 +151,7 @@ Zabbix proxy
 - 支持Zabbix组建之间的加密通讯(server, proxy, agent, zabbix_sender 和 zabbix_get 程序) 使用TLS（Transport Layer Security ）协议。
 # 二.环境
 由于实验环境资源有限，本实验中只有一台 Zabbix Server 和一台被监控的Host，配置如下：
+
 **Zabbix Server**
 ```bash
 [root@zabbix ~]# cat /etc/centos-release
