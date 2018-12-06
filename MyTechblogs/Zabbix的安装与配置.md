@@ -296,4 +296,15 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 ```
 重启之后如果无其他异常，那么 Zabbix Server 已经正常运行，等待进一步配置。
 ## 3.2 配置 Zabbix Web 
-在浏览器地址栏输入：http://10.1.1.21/zabbix （http://server_ip_or_name/zabbix）后按下回车键。 
+在浏览器地址栏输入：http://172.31.3.21/zabbix 
+
+（http://server_ip_or_name/zabbix）后按下回车键。 输入用户名 Admin 以及密码 zabbix 以作为 Zabbix超级用户登陆。
+
+# 相关资料
+[官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)
+
+[下载地址及简要安装教程](https://www.zabbix.com/download)
+
+[Zabbix安全最佳实践](https://www.zabbix.com/documentation/4.0/zh/manual/installation/requirements/best_practices)
+
+[CentOS环境下官方安装教程](https://www.zabbix.com/documentation/4.0/zh/manual/installation/install_from_packages/rhel_centos)
