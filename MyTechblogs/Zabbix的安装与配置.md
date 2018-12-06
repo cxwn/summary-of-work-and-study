@@ -83,12 +83,12 @@ Zabbix agent 可以运行被动检查和主动检查。
 
 事件关联（event correlation）
 
-- 自动灵活的、精确的关联问题和解决方案
+- 自动灵活的、精确的关联问题和解决方案。
 
 比如说，你可以定义触发器A告警的异常可以由触发器B解决，触发器B可能采用完全不同的数据采集方式。
 
 异常（problems） 
-- 一个处在“异常”状态的触发器
+- 一个处在“异常”状态的触发器。
 
 异常更新（problem update）
 
@@ -150,26 +150,26 @@ Zabbix proxy
 
 - 支持Zabbix组建之间的加密通讯(server, proxy, agent, zabbix_sender 和 zabbix_get 程序) 使用TLS（Transport Layer Security ）协议。
 # 二.环境
-Server：
+由于实验环境资源有限，本实验中只有一台 Zabbix Server 和一台被监控的Host，配置如下：
+**Zabbix Server**
 ```bash
 [root@zabbix ~]# cat /etc/centos-release
 CentOS Linux release 7.5.1804 (Core)
 [root@zabbix ~]# ip addr show |grep eth0|egrep -o '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+'
 172.31.3.21/22
+[root@zabbix ~]# zabbix_server --version
+zabbix_server (Zabbix) 4.0.2
 ```
-
+**Host**
 ```bash
-[root@httpd ~]# systemctl enable httpd
-Created symlink from /etc/systemd/system/multi-user.target.wants/httpd.service to /usr/lib/systemd/system/httpd.service.
-[root@httpd ~]# systemctl status httpd
-● httpd.service - The Apache HTTP Server
-   Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
-   Active: active (running) since 二 2018-12-04 14:38:56 CST; 2min 41s ago
-[root@httpd ~]# firewall-cmd --permanent --add-service=http
-success
-[root@httpd ~]# firewall-cmd --reload
-success
+[root@httpd ~]# cat /etc/centos-release
+CentOS Linux release 7.5.1804 (Core)
+[root@httpd ~]# ip addr show |grep eth0|egrep -o '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+'
+172.31.3.41/22
+[root@httpd ~]# zabbix_agentd -V
+zabbix_agentd (daemon) (Zabbix) 4.0.2
 ```
+Host主机的防火墙已关闭。
 # 三.安装与配置过程
 ## 3.1 Zabbix Server 的安装与配置 
 ### 3.1.1 安装仓库配置包
@@ -304,8 +304,18 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 出现以下界面说明安装成功。
 ![安装成功](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-success.png)
 点击Finish即可。
-
-输入用户名 Admin 以及密码 zabbix 以作为 Zabbix超级用户登陆。
+### 3.2.2 登录并简单设置
+输入用户名 Admin 以及密码 zabbix 以作为 Zabbix 超级用户登录。页面右上角找到用户头像标志，把语言设置为中文。
+### 3.3 在Host主机上安装agent程序并设置
+```bash
+[root@httpd ~]# rpm -ivh zabbix-release-4.0-1.el7.noarch.rpm
+[root@httpd ~]# yum -y install zabbix-agent
+[root@httpd ~]# sed -i.bak 's/Server=127.0.0.1/Server=172.31.3.21/g' /etc/zabbix/zabbix_agentd.conf
+[root@httpd ~]# systemctl start zabbix-agent
+[root@httpd ~]# systemctl enable zabbix-agent
+Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.service to /usr/lib/systemd/system/zabbix-agent.service.
+```
+### 3.4 添加主机
 
 # 相关资料
 [官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)
