@@ -296,9 +296,16 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 ```
 重启之后如果无其他异常，那么 Zabbix Server 已经正常运行，等待进一步配置。
 ## 3.2 配置 Zabbix Web 
+### 3.2.1 初始化Web设置
 在浏览器地址栏输入：http://172.31.3.21/zabbix 
+（http://server_ip_or_name/zabbix）后按下回车键。 
+点击Next setup按钮，按照提示输入必填内容，填写完毕之后界面大致如下：
+![安装确认](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Pre-Install.png)
+出现以下界面说明安装成功。
+![安装成功](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-success.png)
+点击Finish即可。
 
-（http://server_ip_or_name/zabbix）后按下回车键。 输入用户名 Admin 以及密码 zabbix 以作为 Zabbix超级用户登陆。
+输入用户名 Admin 以及密码 zabbix 以作为 Zabbix超级用户登陆。
 
 # 相关资料
 [官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)
