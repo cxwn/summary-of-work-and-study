@@ -316,13 +316,25 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 [root@httpd ~]# systemctl enable zabbix-agent
 Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.service to /usr/lib/systemd/system/zabbix-agent.service.
 ```
-### 3.4 添加主机
+### 3.4 添加第一台被监控主机
 
-# 相关资料
-[官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)
+# 四.总结
+4.1 总体来说，Zabbix是非常容易安装、使用的，但是在安装过程中还是需要注意一些细节。
 
-[下载地址及简要安装教程](https://www.zabbix.com/download)
+4.2 安装的过程中，我禁用了可能对安装造成干扰的一些项目。尽可能减少一些干扰项，待服务调试正常之后再选择是否加入这些功能。
 
-[Zabbix安全最佳实践](https://www.zabbix.com/documentation/4.0/zh/manual/installation/requirements/best_practices)
+4.3 Zabbix 的官方文档很详细，还提供中文版，但是也还有一些坑需要我们去思考、总结。
 
-[CentOS环境下官方安装教程](https://www.zabbix.com/documentation/4.0/zh/manual/installation/install_from_packages/rhel_centos)
+4.4 如果使用二进制安装，那么进程管理账户那是非常有必要考虑的。在官方文档中有提到，zabbix server 和 zabbix agent 在同一台主机上安装时，需要使用不通的进程管理账户。
+
+4.4 这篇文章主要介绍的Zabbix的安装，截图较少，需要一些使用经验。进一步的使用会在后面的文章中具体展开介绍，不足之处万望海涵。愿大家与我一起成长！
+# 五.相关资料
+5.1 [官方仓库](https://repo.zabbix.com/zabbix/4.0/rhel/7/x86_64/)
+
+5.2 [下载地址及简要安装教程](https://www.zabbix.com/download)
+
+5.3 [Zabbix安全最佳实践](https://www.zabbix.com/documentation/4.0/zh/manual/installation/requirements/best_practices)
+
+5.4 [CentOS环境下官方安装教程](https://www.zabbix.com/documentation/4.0/zh/manual/installation/install_from_packages/rhel_centos)
+
+5.5 [最新版官方中文文档](https://www.zabbix.com/documentation/4.0/zh/manual)
