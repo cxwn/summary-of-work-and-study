@@ -319,10 +319,14 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 ### 3.4 添加第一台被监控主机
 登录系统之后，依次点击：配置->创建主机（右上角）。依次填入或者选择如下图所示项目：
 ![Add Host](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-addHost0.png)
+
 选择模板并添加：
 ![选择模板](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-addHost.png)
+
 选择完成之后，点击添加，查看：
+
 ![查看状态](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-status.png)
+
 出现如上图所示内容则代表配置成功，可以进一步探索Zabbix强大的功能了。
 
 # 四.总结
