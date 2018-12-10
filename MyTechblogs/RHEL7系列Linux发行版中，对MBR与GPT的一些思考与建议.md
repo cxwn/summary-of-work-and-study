@@ -64,3 +64,119 @@ Number  Start   End     Size    File system  Name  标志
         sda1                       启动，不可用              主分区                GPT                                                                 10737.42               *
 ```
 以上内容主要展示了lsblk、fdisk、parted、cfdisk等四款工具。lsblk主要用于查看磁盘及分区情况，fdisk为较为常用的分区工具，支持2TB以下容量的磁盘的分区操作，如果超过2TB以上容量的磁盘，则需要使用parted来进行分区，cfdisk则是一款比较容易上手的分区工具。这些工具在之前的文章中有介绍，可以查阅之前文章。
+## 3.3 MBR类型的分区表使用心得
+```bash
+[root@mbr ~]# lsblk
+NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+fd0               2:0    1    4K  0 disk
+sda               8:0    0   10G  0 disk
+├─sda1            8:1    0    1G  0 part /boot
+└─sda2            8:2    0    9G  0 part
+  ├─centos-root 253:0    0    8G  0 lvm  /
+  └─centos-swap 253:1    0    1G  0 lvm  [SWAP]
+sdb               8:16   0    1G  0 disk
+sdc               8:32   0    1G  0 disk
+sdd               8:48   0    1G  0 disk
+sde               8:64   0    1G  0 disk
+sr0              11:0    1 1024M  0 rom
+[root@gpt ~]# fdisk -l /dev/sdb
+WARNING: fdisk GPT support is currently new, and therefore in an experimental phase. Use at your own discretion.
+设备      Boot      Start         End      Blocks   Id  System
+/dev/sdb1            2048      501759      249856   83  Linux
+/dev/sdb2          501760      706559      102400   83  Linux
+/dev/sdb3          706560      911359      102400   83  Linux
+/dev/sdb4          911360     1105919       97280   83  Linux
+命令(输入 m 获取帮助)：n
+If you want to create more than four partitions, you must replace a
+primary partition with an extended partition first.
+命令(输入 m 获取帮助)：w
+The partition table has been altered!
+Calling ioctl() to re-read partition table.
+正在同步磁盘。
+[root@mbr ~]# partprobe
+[root@mbr ~]# lsblk
+NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+fd0               2:0    1    4K  0 disk
+sda               8:0    0   10G  0 disk
+├─sda1            8:1    0    1G  0 part /boot
+└─sda2            8:2    0    9G  0 part
+  ├─centos-root 253:0    0    8G  0 lvm  /
+  └─centos-swap 253:1    0    1G  0 lvm  [SWAP]
+sdb               8:16   0    1G  0 disk
+├─sdb1            8:17   0  244M  0 part
+├─sdb2            8:18   0  100M  0 part
+├─sdb3            8:19   0  100M  0 part
+└─sdb4            8:20   0   95M  0 part
+sdc               8:32   0    1G  0 disk
+sdd               8:48   0    1G  0 disk
+sde               8:64   0    1G  0 disk
+sr0              11:0    1 1024M  0 rom
+```
+从上面的实验，我们可以看出，MBR类型的分区表在使用过程中会造成h       储空间的浪费。也就是说，一块磁盘，创建了4个主分区，如果4个主分区的空间使用总和小于磁盘实际可用空间，那么就无法再继续进行分区操作，因此是无法充分利用这些磁盘空间的。
+
+删除这些分区后，从该磁盘第4个分区开始，系统默认使用扩展分区，通过扩展分区新建分区，存储空间浪费的情况同样存在。
+```bash
+[root@mbr ~]# lsblk
+NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+fd0               2:0    1    4K  0 disk
+sda               8:0    0   10G  0 disk
+├─sda1            8:1    0    1G  0 part /boot
+└─sda2            8:2    0    9G  0 part
+  ├─centos-root 253:0    0    8G  0 lvm  /
+  └─centos-swap 253:1    0    1G  0 lvm  [SWAP]
+sdb               8:16   0    1G  0 disk
+├─sdb1            8:17   0  100M  0 part
+├─sdb2            8:18   0  100M  0 part
+├─sdb3            8:19   0  100M  0 part
+├─sdb4            8:20   0    1K  0 part
+├─sdb5            8:21   0   10M  0 part
+├─sdb6            8:22   0   10M  0 part
+└─sdb7            8:23   0   77M  0 part
+sdc               8:32   0    1G  0 disk
+sdd               8:48   0    1G  0 disk
+sde               8:64   0    1G  0 disk
+sr0              11:0    1 1024M  0 rom
+```
+下面依然使用fdisk对磁盘sdb进行分区，但是把磁盘的分区表类型改成了GPT，部分结果如下：
+```bash
+[root@gpt ~]# fdisk -l /dev/sdb
+命令(输入 m 获取帮助)：g
+Building a new GPT disklabel (GUID: 757B3774-B7F0-4650-80B1-EAA13E59C602)
+将显示/记录单位更改为盲区。
+命令(输入 m 获取帮助)：n
+分区号 (1-128，默认 1)：
+第一个扇区 (2048-2097118，默认 2048)：
+Last sector, +sectors or +size{K,M,G,T,P} (2048-2097118，默认 2097118)：+100M
+已创建分区 1
+命令(输入 m 获取帮助)：p
+磁盘 /dev/sdb：1073 MB, 1073741824 字节，2097152 个扇区
+Units = 扇区 of 1 * 512 = 512 bytes
+扇区大小(逻辑/物理)：512 字节 / 4096 字节
+I/O 大小(最小/最佳)：4096 字节 / 4096 字节
+磁盘标签类型：gpt
+Disk identifier: 757B3774-B7F0-4650-80B1-EAA13E59C602
+#         Start          End    Size  Type            Name
+ 1         2048       206847    100M  Linux filesyste
+[root@mbr ~]# partprobe
+[root@mbr ~]# lsblk
+NAME            MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+fd0               2:0    1    4K  0 disk
+sda               8:0    0   10G  0 disk
+├─sda1            8:1    0    1G  0 part /boot
+└─sda2            8:2    0    9G  0 part
+  ├─centos-root 253:0    0    8G  0 lvm  /
+  └─centos-swap 253:1    0    1G  0 lvm  [SWAP]
+sdb               8:16   0    1G  0 disk
+├─sdb1            8:17   0  100M  0 part
+├─sdb2            8:18   0  100M  0 part
+├─sdb3            8:19   0  100M  0 part
+├─sdb4            8:20   0  100M  0 part
+├─sdb5            8:21   0  100M  0 part
+├─sdb6            8:22   0  100M  0 part
+└─sdb7            8:23   0  423M  0 part
+sdc               8:32   0    1G  0 disk
+sdd               8:48   0    1G  0 disk
+sde               8:64   0    1G  0 disk
+sr0              11:0    1 1024M  0 rom
+```
+从操作过程中，我们可用看到，分区号1-128，与前文所述一致。磁盘分区之后可用空间与实际空间差距不大，存储空间浪费较小。
