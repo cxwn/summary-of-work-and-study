@@ -317,11 +317,20 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.se
 Created symlink from /etc/systemd/system/multi-user.target.wants/zabbix-agent.service to /usr/lib/systemd/system/zabbix-agent.service.
 ```
 ### 3.4 添加第一台被监控主机
+登录系统之后，依次点击：配置->创建主机（右上角）。依次填入或者选择如下图所示项目：
+![Add Host](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-addHost0.png)
+
+选择模板并添加：
+![选择模板](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-addHost.png)
+
+选择完成之后，点击添加，查看：
+
+![查看状态](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-status.png)
+
+出现如上图所示内容则代表配置成功，可以进一步探索Zabbix强大的功能了。
 
 # 四.总结
 4.1 总体来说，Zabbix是非常容易安装、使用的，但是在安装过程中还是需要注意一些细节。
-
-4.2 安装的过程中，我禁用了可能对安装造成干扰的一些项目。尽可能减少一些干扰项，待服务调试正常之后再选择是否加入这些功能。
 
 4.3 Zabbix 的官方文档很详细，还提供中文版，但是也还有一些坑需要我们去思考、总结。
 
