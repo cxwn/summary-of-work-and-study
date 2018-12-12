@@ -22,7 +22,7 @@ Zabbix中的主机（Host）是一个你想要监控的网络实体（物理的�
 # 2.1 添加主机
 Zabbix中，可以通过配置（Configuration） → 主机（Hosts）菜单，查看已配置的主机信息。默认已有一个名为'Zabbix server'的预先定义好的主机。点击右上角创建主机（Create host）以添加新的主机，带星号项为必填项。
 
-一下字段为必填项：
+以下字段为必填项：
 
 - **主机名称（Host name）**
 
@@ -45,8 +45,9 @@ Zabbix中，可以通过配置（Configuration） → 主机（Hosts）菜单，
 
 因为我们在创建主机时对“模板”选项卡进行过选择，所以监控项不为0。如果没有选择模板，监控项是为0的。点击右上角创建监控项（Create item），将会显示一个监控项定义表格，带星号选项均为必填项。
 
-对于监控项的示例，需要输入如图所示的以下必要的信息：
+需要输入如图所示的以下必要的信息：
 ![Item](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/zabbix-item.png)
+
 当完成后，点击添加（Add）。当一个监控项定义完成后，你可能好奇它具体获得了什么值。前往监控（Monitoring） → 最新数据（Latest data）, 在过滤器中选择刚才新建的主机，然后点击应用（Apply)。如下图：
 ![监控图形](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/zabbix-item-picture.png)
 测试CPU负载命令如下：
@@ -66,6 +67,7 @@ Zabbix中，可以通过配置（Configuration） → 主机（Hosts）菜单，
 
 对于触发器，填写内容如下图：
 ![触发器](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/zabbix-trigger.png)
+
 这个的表达式大致是说如果3分钟内，CPU负载的平均值超过2，那么就触发了问题的阈值。完成后，点击添加（Add）。新的触发器将会显示在触发器列表中。
 如果CPU负载超过了你在触发器中定义的阈值，这个问题将显示在监控（Monitoring） → 问题（Problems）中。
 ![问题](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/zabbix-trigger-result.png)
@@ -101,10 +103,13 @@ Zabbix中，可以通过配置（Configuration） → 主机（Hosts）菜单，
 
 点击更新（Update）保存配置。新模版及其所有的对象被添加到了主机。
 
-你可能会想到，我们可以使用同样的方法将模版应用到其他主机。任何在模版级别的监控项、触发器及其他对象的变更，也会传递给所有链接该模版的主机。
+你可能会想到，我们可以使用同样的方法将模版应用到其他主机。任何在模版级别的监控项、触发器及其他对象的变更，也会传递给所有链接该模版的主机。最终结果应该如下图：
+![最终结果](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/zabbix-template.png)
 
 ## 6.4 链接预定义模版到主机
 你可能注意到，Zabbix为各种操作系统、设备以及应用准备一些预定义的模版。为了快速部署监控，你可能会将它们中的一些与主机关联。但请注意，一些模版需要根据你的实际环境进行合适的调整。比如：一些检查项是不需要的，一些轮询周期过于频繁。
+
+至此，Zabbix的快速入门暂告一段落，在接下来的文章中我们将进一步探讨。
 
 # 七.相关资料
 7.1 [支持的监控项](https://www.zabbix.com/documentation/4.0/zh/manual/config/items/itemtypes/zabbix_agent)
