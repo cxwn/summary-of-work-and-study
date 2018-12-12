@@ -10,5 +10,5 @@ cp：是否覆盖"/usr/share/fonts/dejavu/DejaVuSans.ttf"？ y
 ```
 ## 2.2 处理结果
 刷新页面后，再次观察：
-
-g
+![处理结果](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Zabbix-error-2.png)
+问题成功解决。
