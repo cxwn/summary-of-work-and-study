@@ -49,7 +49,7 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDjI58Vk8kCQqu6PPng8/bjkZY2JrsH/kExR9JpZ9I+
 ```
 上一步连续按了几次回车键，其实就是采用默认设置，默认情况下新生成的key位于~/.ssh/目录下。把id_rsa.pub的内容添加到GitHub。具体步骤为：settings(点击右上角用户头像) -> SSH and GPG keys -> New SSH key -> ADD SSH key.Title随便填，Key部分就是复制的内容。也可以在登陆后直接输入以下地址：https://github.com/settings/ssh/new
 
-![New SSH key](https://raw.githubusercontent.com/mrivandu/MyImageHostingService/master/Linux%E4%B8%8BGitHub%E5%BF%AB%E9%80%9F%E9%85%8D%E7%BD%AE%E5%B9%B6%E4%BD%BF%E7%94%A8.png)
+![New SSH key](https://raw.githubusercontent.com/mrivandu/WorkAndStudy/master/MyImageHostingService/Linux%E4%B8%8BGitHub%E5%BF%AB%E9%80%9F%E9%85%8D%E7%BD%AE%E5%B9%B6%E4%BD%BF%E7%94%A8.png)
 
 2.4 测试一下是否添加成功。
 ```bash
