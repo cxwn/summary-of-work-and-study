@@ -52,5 +52,5 @@ docker volume rm volume_name
 ```
 还可以（在删除容器的同时强制删除volume）：
 ```bash
-docker rm -vf volume_name
+docker rm -vf container_name
 ```
