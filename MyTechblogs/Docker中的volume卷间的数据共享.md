@@ -34,3 +34,23 @@ total 0
 3.1 当一个容器的volume被其他容器共享时，其他容器是不需要创建共享目录的，共享目录会在其他容器内被自动创建，与被共享容器的目录名称一致。
 
 3.2 一个容器的volume可以被多个容器同时共享。
+
+3.3 当容器被删除时，volume不会被自动删除。如果数据不会再次被使用，那么可以通过手动来删除已经废弃的volume,命令如下：
+```bash
+[root@dev ~]# docker volume ls
+DRIVER              VOLUME NAME
+local               8126b3ad828a9a7e29ec04f4d7a1901be5e40ca6157fde62dca3421322e5de7a
+local               bf80e1eb66685161cb6bf6943079de4a68a7bc3db3bba241347ed051fe59fc46
+[root@dev ~]# docker volume prune
+WARNING! This will remove all volumes not used by at least one container.
+Are you sure you want to continue? [y/N] y
+Total reclaimed space: 0 B
+```
+也可以：
+```bash
+docker volume rm volume_name
+```
+还可以（在删除容器的同时强制删除volume）：
+```bash
+docker rm -vf volume_name
+```
