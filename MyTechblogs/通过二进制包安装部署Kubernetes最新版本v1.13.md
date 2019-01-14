@@ -45,7 +45,7 @@ docker-ce.x86_64            18.06.0.ce-3.el7                    docker-ce-stable
 [root@gysl-k8s-1 ~]# systemctl enable docker
 Created symlink from /etc/systemd/system/multi-user.target.wants/docker.service to /usr/lib/systemd/system/docker.service.
 ```
-**注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。
+**注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
 ## 3.3 下载相关二进制包
 ### 3.3.1 下载 Kubernetes Server 并校验包
 ```bash
