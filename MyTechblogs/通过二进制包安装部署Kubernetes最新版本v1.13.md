@@ -46,8 +46,16 @@ docker-ce.x86_64            18.06.0.ce-3.el7                    docker-ce-stable
 Created symlink from /etc/systemd/system/multi-user.target.wants/docker.service to /usr/lib/systemd/system/docker.service.
 ```
 **注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
-## 3.3 下载相关二进制包
-### 3.3.1 下载 Kubernetes Server 并校验包
+## 3.3 配置主机域名
+```bash
+[root@gysl-k8s-1 ~]# echo '172.31.3.11 gysl-k8s-1
+172.31.3.12 gysl-k8s-2'>>/etc/hosts
+[root@gysl-k8s-2 ~]# echo '172.31.3.11 gysl-k8s-1
+172.31.3.12 gysl-k8s-2'>>/etc/hosts
+```
+每个节点都需要进行配置。
+## 3.4 下载相关二进制包
+### 3.4.1 下载 Kubernetes Server 并校验
 ```bash
 [root@gysl-k8s-1 ~]# curl -C - -O https://storage.googleapis.com/kubernetes-release/release/v1.13.0/kubernetes-server-linux-amd64.tar.gz
 ** Resuming transfer from byte position 5073666
@@ -57,13 +65,12 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/docker.service 
 [root@gysl-k8s-1 ~]# sha512sum kubernetes-server-linux-amd64.tar.gz
 a8e3d457e5bcc1c09eeb66111e8dd049d6ba048c3c0fa90a61814291afdcde93f1c6dbb07beef090d1d8a9958402ff843e9af23ae9f069c17c0a7c6ce4034686  kubernetes-server-linux-amd64.tar.gz
 ```
-### 3.3.2 下载 Kubernetes Client 并校验包
+### 3.4.2 下载etcd
 ```bash
-[root@gysl-k8s-2 ~]# curl -C - -O https://storage.googleapis.com/kubernetes-release/release/v1.13.0/kubernetes-node-linux-amd64.tar.gz
-** Resuming transfer from byte position 3439478
+[root@gysl-k8s-1 ~]# curl -L -C - -O  https://github.com/etcd-io/etcd/releases/download/v3.2.26/etcd-v3.2.26-linux-amd64.tar.gz
+** Resuming transfer from byte position 138813
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100 83.7M  100 83.7M    0     0   577k      0  0:02:28  0:02:28 --:--:--  569k
-[root@gysl-k8s-2 ~]# sha512sum kubernetes-node-linux-amd64.tar.gz
-9d18ba5f0c3b09edcf29397a496a1e908f4906087be3792989285630d7bcbaf6cd3bdd7b07dace439823885acc808637190f5eaa240b7b4580acf277b67bb553  kubernetes-node-linux-amd64.tar.gz
+100   621    0   621    0     0     96      0 --:--:--  0:00:06 --:--:--   126
+  0     0    0     0    0     0      0      0 --:--:--  0:00:31 --:--:--     0
 ```
