@@ -26,9 +26,9 @@ reboot
 ```
 ## 3.2 安装Docker并设置
 ```bash
-[root@gysl-m ~]# curl -C - -O http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-[root@gysl-m ~]# mv docker-ce.repo /etc/yum.repos.d/
-[root@gysl-m ~]# yum remove docker \
+curl -C - -O http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+mv docker-ce.repo /etc/yum.repos.d/
+yum remove docker \
                   docker-client \
                   docker-client-latest \
                   docker-common \
@@ -38,13 +38,10 @@ reboot
                   docker-selinux \
                   docker-engine-selinux \
                   docker-engine
-[root@gysl-m ~]# yum list docker-ce --showduplicates|grep "^doc"|sort -r
-docker-ce.x86_64            18.06.0.ce-3.el7                    docker-ce-stable
-...
-[root@gysl-m ~]# yum -y install docker-ce-18.06.0.ce-3.el7
-[root@gysl-m ~]# systemctl start docker
-[root@gysl-m ~]# systemctl enable docker
-Created symlink from /etc/systemd/system/multi-user.target.wants/docker.service to /usr/lib/systemd/system/docker.service.
+yum list docker-ce --showduplicates|grep "^doc"|sort -r
+yum -y install docker-ce-18.06.0.ce-3.el7
+systemctl start docker
+systemctl enable docker
 ```
 **注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
 ## 3.3 配置主机域名
@@ -127,7 +124,7 @@ Getting CA Private Key
 [root@gysl-m ssl]# ls
 ca.key  ca.pem  ca.srl  client.crt  client.csr  client.key  server.crt  server.csr  server.key
 ```
-### 3.5.2 安装配置etcd
+### 3.5.2 安装配置etcd服务
 ```bash
 [root@gysl-m ~]# tar -xvzf etcd-v3.2.26-linux-amd64.tar.gz
 [root@gysl-m ~]# mv etcd-v3.2.26-linux-amd64/{etcd,etcdctl} /usr/local/bin/
@@ -153,7 +150,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/etcd.service to
 member 8e9e05c52164694d is healthy: got healthy result from http://localhost:2379
 cluster is healthy
 ```
-### 3.5.3 安装配置kube-apiserver
+### 3.5.3 安装配置kube-apiserver服务
 ```bash
 [root@gysl-m ~]# tar -xzf kubernetes-server-linux-amd64.tar.gz
 [root@gysl-m ~]# mv kubernetes/server/bin/kube-apiserver /usr/local/bin/
@@ -198,20 +195,301 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.
 [root@gysl-m ~]# systemctl status kube-apiserver
 ● kube-apiserver.service - Kubernetes API Server
    Loaded: loaded (/usr/lib/systemd/system/kube-apiserver.service; enabled; vendor preset: disabled)
-   Active: active (running) since 五 2019-01-18 16:17:37 CST; 1s ago
+   Active: active (running)
 ```
 至此，kube-apiser部署成功。一些启动参数如下：
-- etcd_servers: 指定etcd服务的URL
+- etcd_servers: 指定etcd服务的URL。
 - insecure-bind-address： apiserver绑定主机的非安全端口，设置0.0.0.0表示绑定所有IP地址
-- insecure-port: apiserver绑定主机的非安全端口号，默认为8080
+- insecure-port: apiserver绑定主机的非安全端口号，默认为8080。
 - service-cluster-ip-range: Kubernetes集群中service的虚拟IP地址范围，以CIDR表示，该IP范围不能与物理机的真实IP段有重合。
-- service-node-port-range: kubernetes集群中Service可映射的物理机端口号范围，默认为30000–32767.
-- admission_control: kubernetes集群的准入控制设置，各控制模块以插件的形式依次生效
-- logtostderr: 设置为false表示将日志写入文件，不写入stderr
-- log-dir: 日志目录
-- v: 日志级别
+- service-node-port-range: kubernetes集群中Service可映射的物理机端口号范围，默认为30000–32767。
+- admission_control: kubernetes集群的准入控制设置，各控制模块以插件的形式依次生效。
+- logtostderr: 设置为false表示将日志写入文件，不写入stderr。
+- log-dir: 日志目录。
+- v: 日志级别。
+### 3.5.4 准备kubeconfig文件
+文件内容如下：
+```yaml
+apiVersion: v1
+kind: Config
+users:
+- name: gysl
+  user:
+    client-certificate: /etc/kubernetes/ssl/client.crt
+    client-key: /etc/kubernetes/ssl/client.key
+clusters:
+- name: gysl-cluster
+  cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.pem
+contexts:
+- context:
+    cluster: gysl-cluster
+    user: gysl
+  name: gysl-context
+current-context: gysl-context
+```
+```bash
+[root@gysl-m ~]# echo \
+'apiVersion: v1
+kind: Config
+users:
+- name: gysl
+  user:
+    client-certificate: /etc/kubernetes/ssl/client.crt
+    client-key: /etc/kubernetes/ssl/client.key
+clusters:
+- name: gysl-cluster
+  cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.pem
+contexts:
+- context:
+    cluster: gysl-cluster
+    user: gysl
+  name: gysl-context
+current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
+```
+### 3.5.5 安装配置kube-controller-manager服务
+```bash
+[root@gysl-m ~]# mv kubernetes/server/bin/kube-controller-manager /usr/local/bin/
+[root@gysl-m ~]# echo \
+'KUBE_CONTROLLER_MANAGER_ARGS=" \
+--master=https://172.31.3.11:6443 \
+--service-account-private-key-file=/etc/kubernetes/ssl/server.key \
+--root-ca-file=/etc/kubernetes/ssl/ca.pem \
+--kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+--logtostderr=false \
+--log-dir=/var/log/kubernetes/controller-manager \
+--v=2"'>/etc/kubernetes/controller-manager.conf
+[root@gysl-m ~]# mkdir -p /var/log/kubernetes/controller-manager
+[root@gysl-m ~]# echo \
+'[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=kube-apiserver.service
+Requires=kube-apiserver.service
 
+[Service]
+WorkingDirectory=/var/lib/kubernetes/kube-controller-manager/
+EnvironmentFile=/etc/kubernetes/controller-manager.conf
+ExecStart=/usr/local/bin/kube-controller-manager $KUBE_CONTROLLER_MANAGER_ARGS
+Restart=on-failure
+LimitNOFIFE=65536
 
+[Install]
+WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-controller-manager.service
+[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-controller-manager
+[root@gysl-m ~]# systemctl daemon-reload
+[root@gysl-m ~]# systemctl start kube-controller-manager
+[root@gysl-m ~]# systemctl enable kube-controller-manager
+Created symlink from /etc/systemd/system/multi-user.target.wants/kube-controller-manager.service to /usr/lib/systemd/system/kube-controller-manager.service.
+[root@gysl-m ~]# systemctl status kube-controller-manager
+● kube-controller-manager.service - Kubernetes Controller Manager
+   Loaded: loaded (/usr/lib/systemd/system/kube-controller-manager.service; enabled; vendor preset: disabled)
+   Active: active (running) 
+```
+kube-controller-manager服务安装配置成功！
+### 3.5.6 安装配置kube-scheduler服务
+```bash
+[root@gysl-m ~]# echo \
+'KUBE_SCHEDULER_ARGS="\
+--master=https://172.31.3.11:6443 \
+--kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+--logtostderr=false \
+--log-dir=/var/log/kubernetes/scheduler \
+--v=2"'>/etc/kubernetes/scheduler.conf
+[root@gysl-m ~]# mkdir /var/log/kubernetes/scheduler
+[root@gysl-m ~]# echo \
+'[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=kube-apiserver.service
+Wants=kube-apiserver.service
+
+[Service]
+WorkingDirectory=/var/lib/kubernetes/kube-scheduler/
+EnvironmentFile=/etc/kubernetes/scheduler.conf
+ExecStart=/usr/local/bin/kube-scheduler $KUBE_SCHEDULER_ARGS
+LimitNOFIFE=65536
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-scheduler.service
+[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-scheduler/
+[root@gysl-m ~]# systemctl daemon-reload
+[root@gysl-m ~]# systemctl start kube-scheduler
+[root@gysl-m ~]# systemctl enable kube-scheduler
+Created symlink from /etc/systemd/system/multi-user.target.wants/kube-scheduler.service to /usr/lib/systemd/system/kube-scheduler.service.
+[root@gysl-m ~]# systemctl status kube-scheduler
+● kube-scheduler.service - Kubernetes Scheduler
+   Loaded: loaded (/usr/lib/systemd/system/kube-scheduler.service; enabled; vendor preset: disabled)
+   Active: active (running) 
+```
+kube-scheduler服务安装配置成功。
+## 3.6 部署Node节点
+### 3.6.1 准备CA证书
+```bash
+[root@gysl-n1 ~]# mkdir -p /etc/kubernetes/ssl && cd /etc/kubernetes/ssl
+[root@gysl-n1 ssl]# scp root@gysl-m:/etc/kubernetes/ssl/ca.{pem,key} .
+root@gysl-m's password:
+ca.pem                                                                                                                                       100% 1099   193.6KB/s   00:00
+root@gysl-m's password:
+ca.key                                                                                                                                       100% 1679   339.1KB/s   00:00
+[root@gysl-n1 ssl]# ls
+ca.key  ca.pem
+[root@gysl-n1 ssl]# openssl genrsa -out client.key 2048
+Generating RSA private key, 2048 bit long modulus
+........................................................................+++
+...................................................................................+++
+e is 65537 (0x10001)
+[root@gysl-n1 ssl]# openssl req -new -key client.key -subj "/CN=172.31.3.12" -out client.csr
+[root@gysl-n1 ssl]# openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client.crt -days 5000
+Signature ok
+subject=/CN=172.31.3.12
+Getting CA Private Key
+```
+### 3.6.2 准备kubeconfig文件
+文件内容如下：
+```yaml
+apiVersion: v1
+kind: Config
+users:
+- name: gysl
+  user:
+    client-certificate: /etc/kubernetes/ssl/client.crt
+    client-key: /etc/kubernetes/ssl/client.key
+clusters:
+- name: gysl-cluster
+  cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.crt
+    server: https://172.31.3.11:6443
+contexts:
+- context:
+    cluster: gysl-cluster
+    user: gysl
+  name: gysl-context
+current-context: gysl-context
+```
+```bash
+[root@gysl-n1 ssl]# echo \
+'apiVersion: v1
+kind: Config
+users:
+- name: gysl
+  user:
+    client-certificate: /etc/kubernetes/ssl/client.crt
+    client-key: /etc/kubernetes/ssl/client.key
+clusters:
+- name: gysl-cluster
+  cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.crt
+    server: https://172.31.3.11:6443
+contexts:
+- context:
+    cluster: gysl-cluster
+    user: gysl
+  name: gysl-context
+current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
+```
+### 3.6.3 安装配置kube-kubelet服务
+```bash
+[root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kubelet /usr/local/bin/
+kubelet                                                                                                                                      100%  108MB  73.4MB/s   00:01
+[root@gysl-n1 ~]# echo \
+'KUBELET_ARGS=" \
+--hostname-override=172.31.3.12 \
+--logtostderr=false \
+--log-dir=/var/log/kubernetes/kubelet \
+--v=2 \
+--kubeconfig=/etc/kubernetes/kubeconfig.yaml \
+--cgroup-driver=systemd \
+--pod-infra-container-image=172.31.3.11:443/k8s/pause-amd64:3.0"'>/etc/kubernetes/kubelet.conf
+[root@gysl-n1 ~]# mkdir -p /var/log/kubernetes/kubelet
+[root@gysl-n1 ~]# echo \
+'[Unit]
+Description=Kubelet Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=docker.service
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/var/lib/kubernetes/kubelet
+EnvironmentFile=/etc/kubernetes/kubelet.conf
+ExecStart=/usr/local/bin/kubelet $KUBELET_ARGS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-kubelet.service
+[root@gysl-n1 ~]# mkdir -p /var/lib/kubernetes/kubelet
+[root@gysl-n1 ~]# systemctl daemon-reload
+[root@gysl-n1 ~]# systemctl start kube-kubelet
+[root@gysl-n1 ~]# systemctl enable kube-kubelet
+Created symlink from /etc/systemd/system/multi-user.target.wants/kube-kubelet.service to /usr/lib/systemd/system/kube-kubelet.service.
+[root@gysl-n1 ~]# systemctl status kube-kubelet
+● kube-kubelet.service - Kubelet Server
+   Loaded: loaded (/usr/lib/systemd/system/kube-kubelet.service; enabled; vendor preset: disabled)
+   Active: active (running)
+```
+kube-kubelet服务安装配置成功！
+### 3.6.4 安装配置kube-proxy服务
+```bash
+[root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kube-proxy /usr/local/bin/
+kube-proxy            100%   33MB  42.4MB/s   00:00
+[root@gysl-n1 ~]# echo \
+'KUBE_PROXY_ARGS=" \
+--logtostderr=false \
+--log-dir=/var/log/kubernetes/kube-proxy \
+--v=2 \
+--kubeconfig=/etc/kubernetes/kubeconfig.yaml"'>/etc/kubernetes/kube-proxy.conf
+[root@gysl-n1 ~]# mkdir -p /var/log/kubernetes/kube-proxy
+[root@gysl-n1 ~]# echo \
+'[Unit]
+Description=Kube-Proxy Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+After=network.target
+Requires=network.target
+
+[Service]
+WorkingDirectory=/var/lib/kubernetes/kube-proxy
+EnvironmentFile=/etc/kubernetes/proxy.conf
+ExecStart=/usr/local/bin/kube-proxy $KUBE_PROXY_ARGS
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-proxy.service
+[root@gysl-n1 ~]# mkdir -p /var/lib/kubernetes/kube-proxy
+[root@gysl-n1 ~]# systemctl daemon-reload
+[root@gysl-n1 ~]# systemctl start kube-proxy
+[root@gysl-n1 ~]# systemctl enable kube-proxy
+Created symlink from /etc/systemd/system/multi-user.target.wants/kube-proxy.service to /usr/lib/systemd/system/kube-proxy.service.
+[root@gysl-n1 ~]# systemctl status kube-proxy
+
+```
+### 3.7 导入相关镜像
+```bash
+[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-apiserver.tar
+37ec61735c38: Loading layer [==================================================>]  138.6MB/138.6MB
+Loaded image: k8s.gcr.io/kube-apiserver:v1.13.0
+[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-controller-manager.tar
+474fef97be8a: Loading layer [==================================================>]  103.9MB/103.9MB
+Loaded image: k8s.gcr.io/kube-controller-manager:v1.13.0
+[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-scheduler.tar
+5fe6d025ca50: Loading layer [==================================================>]  43.87MB/43.87MB
+f6c506417998: Loading layer [==================================================>]  37.27MB/37.27MB
+Loaded image: k8s.gcr.io/kube-scheduler:v1.13.0
+[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-proxy.tar
+e5a609b37e16: Loading layer [==================================================>]  3.403MB/3.403MB
+232e8910ede8: Loading layer [==================================================>]  34.81MB/34.81MB
+Loaded image: k8s.gcr.io/kube-proxy:v1.13.0
+[root@gysl-m ~]# docker images
+REPOSITORY                           TAG                 IMAGE ID            CREATED             SIZE
+k8s.gcr.io/kube-proxy                v1.13.0             8fa56d18961f        6 weeks ago         80.2MB
+k8s.gcr.io/kube-apiserver            v1.13.0             f1ff9b7e3d6e        6 weeks ago         181MB
+k8s.gcr.io/kube-controller-manager   v1.13.0             d82530ead066        6 weeks ago         146MB
+k8s.gcr.io/kube-scheduler            v1.13.0             9508b7d8008d        6 weeks ago         79.6MB
+```
+### 3.7 配置kubectl工具
+### 
 # 参考资料
 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
 
