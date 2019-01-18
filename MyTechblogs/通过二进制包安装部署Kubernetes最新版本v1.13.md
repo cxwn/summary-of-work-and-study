@@ -83,16 +83,12 @@ a8e3d457e5bcc1c09eeb66111e8dd049d6ba048c3c0fa90a61814291afdcde93f1c6dbb07beef090
 [root@gysl-m ~]# cd /etc/kubernetes/ssl/
 [root@gysl-m ssl]# openssl genrsa -out ca.key 2048
 Generating RSA private key, 2048 bit long modulus
-......+++
-............+++
+..................+++
+................+++
 e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl req -x509 -new -nodes -key ca.key -subj "/CN=172.31.3.11" -days 5000 -out ca.crt
-[root@gysl-m ssl]# openssl genrsa -out server.key 2048
-Generating RSA private key, 2048 bit long modulus
-..........................+++
-.......................+++
-e is 65537 (0x10001)
-[root@gysl-m ssl]# echo '[req]
+[root@gysl-m ssl]# openssl req -x509 -new -nodes -key ca.key -subj "/CN=k8s-master" -days 5000 -out ca.pem
+[root@gysl-m ssl]# echo \
+'[req]
 req_extensions = v3_req
 distinguished_name = req_distinguished_name
 [req_distinguished_name]
@@ -108,30 +104,29 @@ DNS.4 = kubernetes.default.svc.cluster.local
 DNS.5 = k8s_master
 IP.1 = 10.1.1.8
 IP.2 = 172.31.3.11'>../openssl.conf
+[root@gysl-m ssl]# openssl genrsa -out server.key 2048
+Generating RSA private key, 2048 bit long modulus
+...........+++
+..........................................................+++
+e is 65537 (0x10001)
 [root@gysl-m ssl]# openssl req -new -key server.key -subj "/CN=gysl-m" -config ../openssl.conf -out server.csr
-[root@gysl-m ssl]# openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 5000 -extensions v3_req -extfile ../openssl.conf -out server.crt
+[root@gysl-m ssl]# openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -days 5000 -extensions v3_req -extfile ../openssl.conf -out server.crt
 Signature ok
 subject=/CN=gysl-m
 Getting CA Private Key
-[root@gysl-m ssl]# openssl genrsa -out cs_client.key 2048
+[root@gysl-m ssl]# openssl genrsa -out client.key 2048
 Generating RSA private key, 2048 bit long modulus
-...................+++
-.....................................+++
+...............................+++
+...............................................................+++
 e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl genrsa -out cs_client.key 2048
-Generating RSA private key, 2048 bit long modulus
-......................+++
-...............................................................................................+++
-e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl req -new -key cs_client.key -subj "/CN=gysl-m" -out cs_client.csr
-[root@gysl-m ssl]# openssl x509 -req -in cs_client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out cs_client.crt -days 5000
+[root@gysl-m ssl]# openssl req -new -key client.key -subj "/CN=gysl-m" -out client.csr
+[root@gysl-m ssl]# openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client.crt -days 5000
 Signature ok
 subject=/CN=gysl-m
 Getting CA Private Key
 [root@gysl-m ssl]# ls
-ca.crt  ca.key  ca.srl  cs_client.crt  cs_client.csr  cs_client.key  server.crt  server.csr  server.key
+ca.key  ca.pem  ca.srl  client.crt  client.csr  client.key  server.crt  server.csr  server.key
 ```
-
 ### 3.5.2 安装配置etcd
 ```bash
 [root@gysl-m ~]# tar -xvzf etcd-v3.2.26-linux-amd64.tar.gz
@@ -141,7 +136,7 @@ ca.crt  ca.key  ca.srl  cs_client.crt  cs_client.csr  cs_client.key  server.crt 
 Description=Etcd Server
 After=network.target
 [Service]
-Type=notify
+Type=simple
 EnvironmentFile=-/etc/etcd.conf
 WorkingDirectory=/var/lib/etcd
 ExecStart=/usr/local/bin/etcd
@@ -164,43 +159,48 @@ cluster is healthy
 [root@gysl-m ~]# mv kubernetes/server/bin/kube-apiserver /usr/local/bin/
 [root@gysl-m ~]# mkdir /etc/kubernetes/
 [root@gysl-m ~]# echo \
-'KUBE_API_ADDRESS="--bind-address=0.0.0.0"
-KUBE_API_PORT="--secure-port=6443"
-KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=10.1.1.0/24"
-KUBE_ETCD_SERVERS="--etcd-servers=http://172.31.3.11:2379"
-KUBE_ADMISSION_CONTROL="--enable-admission-plugins=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,DefaultStorageClass,ResourceQuota"
-KUBE_API_ARGS="--external-hostname=gysl-m \
---service-node-port-range=1-33000 \
---allow-privileged=true \
---anonymous-auth=false \
---watch-cache=false \
---logtostderr=true \
---v=4 \
---client-ca-file=/etc/kubernetes/ssl/ca.crt \
+'KUBE_API_ARGS="--advertise-address=172.31.3.11 \
+--storage-backend=etcd3 \
+--etcd-servers=http://172.31.3.11:2379 \
+--bind-address=172.31.3.11 \
+--service-cluster-ip-range=10.1.1.0/24 \
+--service-node-port-range=30000-65535 \
+--enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+--logtostderr=false \
+--log-dir=/var/log/kubernetes/apiserver \
+--v=2 \
+--client-ca-file=/etc/kubernetes/ssl/ca.pem \
 --tls-private-key-file=/etc/kubernetes/ssl/server.key \
---tls-cert-file=/etc/kubernetes/ssl/server.crt \
---advertise-address=172.31.3.11"'>/etc/kubernetes/apiserver.conf
+--tls-cert-file=/etc/kubernetes/ssl/server.crt"'>/etc/kubernetes/apiserver.conf
 [root@gysl-m ~]# echo \
 '[Unit]
 Description=Kubernetes API Server
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
 After=etcd.service
 Wants=etcd.service
+
 [Service]
+Type=simple
+WorkingDirectory=/var/lib/kubernetes/kube-apiserver/
 EnvironmentFile=/etc/kubernetes/apiserver.conf
-ExecStart=/usr/local/bin/kube-apiserver  \
-        $KUBE_ETCD_SERVERS \
-        $KUBE_API_ADDRESS \
-        $KUBE_API_PORT \
-        $KUBE_SERVICE_ADDRESSES \
-        $KUBE_ADMISSION_CONTROL \
-        $KUBE_API_ARGS
+ExecStart=/usr/local/bin/kube-apiserver  $KUBE_API_ARGS
 Restart=on-failure
-Type=notify
-LimitNOFILE=65536
+LimitNOFIFE=65536
+
 [Install]
 WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-apiserver.service
+[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-apiserver/
+[root@gysl-m ~]# mkdir -p /var/log/kubernetes/apiserver
+[root@gysl-m ~]# systemctl daemon-reload
+[root@gysl-m ~]# systemctl start kube-apiserver
+[root@gysl-m ~]# systemctl enable kube-apiserver
+Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.service to /usr/lib/systemd/system/kube-apiserver.service.
+[root@gysl-m ~]# systemctl status kube-apiserver
+● kube-apiserver.service - Kubernetes API Server
+   Loaded: loaded (/usr/lib/systemd/system/kube-apiserver.service; enabled; vendor preset: disabled)
+   Active: active (running) since 五 2019-01-18 16:17:37 CST; 1s ago
 ```
-一些启动参数如下：
+至此，kube-apiser部署成功。一些启动参数如下：
 - etcd_servers: 指定etcd服务的URL
 - insecure-bind-address： apiserver绑定主机的非安全端口，设置0.0.0.0表示绑定所有IP地址
 - insecure-port: apiserver绑定主机的非安全端口号，默认为8080
