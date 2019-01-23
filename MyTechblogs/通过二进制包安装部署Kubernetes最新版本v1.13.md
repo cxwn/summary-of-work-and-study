@@ -36,9 +36,9 @@ sysctl -p /etc/sysctl.d/kubernetes.conf>&/dev/null
 systemctl stop firewalld
 systemctl disable firewalld
 # Disable the SELinux.
-sed -i 's/=enforcing/=disabled/' /etc/selinux/config
+sed -i.bak 's/=enforcing/=disabled/' /etc/selinux/config
 # Disable the swap .
-sed -i 's/^.*swap/#&/g' /etc/fstab
+sed -i.bak 's/^.*swap/#&/g' /etc/fstab
 # Reboot the machine.
 reboot
 ```
@@ -83,7 +83,7 @@ fi
 
 ### 3.3 下载相关二进制包
 
-执行脚本KubernetesInstall-03.sh。
+在Master执行脚本KubernetesInstall-03.sh。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-03.sh
@@ -114,8 +114,10 @@ kubernetes-server-linux-amd64.tar.gz包括了kubernetes的所有主要组件，�
 
 ### 3.4 部署etcd集群
 
-### 3.4 部署Master节点
+### 3.5 部署Master节点
+
 #### 3.5.1 创建CA证书
+
 ```bash
 [root@gysl-m ~]# mkdir -p /etc/kubernetes/ssl
 [root@gysl-m ~]# cd /etc/kubernetes/ssl/
