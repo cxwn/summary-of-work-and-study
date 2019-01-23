@@ -1,8 +1,15 @@
-# 一 背景
-# 二 环境
-# 三 准备工作
-## 3.1 执行脚本
+# KubernetesInstall
+
+## 一 背景
+
+## 二 环境
+
+## 三 操作步骤
+
+### 3.1 执行脚本
+
 ```bash
+
 [root@gysl-m ~]# sh k8s-init.sh
 ● firewalld.service - firewalld - dynamic firewall daemon
    Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: enabled)
@@ -11,6 +18,7 @@
 net.ipv4.ip_forward = 1
 Enforcing
 ```
+
 k8s-init.sh脚本内容如下：
 ```bash
 #/bin/bash
@@ -24,7 +32,9 @@ sysctl -p
 sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 reboot
 ```
-## 3.2 安装Docker并设置
+
+### 3.2 安装Docker并设置
+
 ```bash
 curl -C - -O http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
 mv docker-ce.repo /etc/yum.repos.d/
@@ -43,17 +53,24 @@ yum -y install docker-ce-18.06.0.ce-3.el7
 systemctl start docker
 systemctl enable docker
 ```
+
 **注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
-## 3.3 配置主机域名
+
+### 3.3 配置主机域名
+
 ```bash
 [root@gysl-m ~]# echo '172.31.3.11 gysl-m
 172.31.3.12 gysl-n1'>>/etc/hosts
 [root@gysl-n1 ~]# echo '172.31.3.11 gysl-m
 172.31.3.12 gysl-n1'>>/etc/hosts
 ```
+
 每个节点都需要进行配置。
-## 3.4 下载相关二进制包
-### 3.4.1 下载 Kubernetes Server 并校验
+
+### 3.4 下载相关二进制包
+
+#### 3.4.1 下载 Kubernetes Server 并校验
+
 ```bash
 [root@gysl-m ~]# curl -C - -O https://storage.googleapis.com/kubernetes-release/release/v1.13.0/kubernetes-server-linux-amd64.tar.gz
 ** Resuming transfer from byte position 5073666
@@ -63,7 +80,9 @@ systemctl enable docker
 [root@gysl-m ~]# sha512sum kubernetes-server-linux-amd64.tar.gz
 a8e3d457e5bcc1c09eeb66111e8dd049d6ba048c3c0fa90a61814291afdcde93f1c6dbb07beef090d1d8a9958402ff843e9af23ae9f069c17c0a7c6ce4034686  kubernetes-server-linux-amd64.tar.gz
 ```
-### 3.4.2 下载etcd
+
+#### 3.4.2 下载etcd
+
 ```bash
 [root@gysl-m ~]# while true;do curl -L -C - -O  https://github.com/etcd-io/etcd/releases/download/v3.2.26/etcd-v3.2.26-linux-amd64.tar.gz;if [ $? -eq 0 ];then break; fi;done
 ** Resuming transfer from byte position 2513511
@@ -73,8 +92,8 @@ a8e3d457e5bcc1c09eeb66111e8dd049d6ba048c3c0fa90a61814291afdcde93f1c6dbb07beef090
   2 7887k    2  203k    0     0   2389      0  0:56:20  0:01:27  0:54:53     0
 ```
 网络不太好，只能这么做了。
-## 3.5 部署Master节点
-### 3.5.1 创建CA证书
+### 3.5 部署Master节点
+#### 3.5.1 创建CA证书
 ```bash
 [root@gysl-m ~]# mkdir -p /etc/kubernetes/ssl
 [root@gysl-m ~]# cd /etc/kubernetes/ssl/
@@ -124,7 +143,7 @@ Getting CA Private Key
 [root@gysl-m ssl]# ls
 ca.key  ca.pem  ca.srl  client.crt  client.csr  client.key  server.crt  server.csr  server.key
 ```
-### 3.5.2 安装配置etcd服务
+#### 3.5.2 安装配置etcd服务
 ```bash
 [root@gysl-m ~]# tar -xvzf etcd-v3.2.26-linux-amd64.tar.gz
 [root@gysl-m ~]# mv etcd-v3.2.26-linux-amd64/{etcd,etcdctl} /usr/local/bin/
@@ -150,7 +169,9 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/etcd.service to
 member 8e9e05c52164694d is healthy: got healthy result from http://localhost:2379
 cluster is healthy
 ```
-### 3.5.3 安装配置kube-apiserver服务
+
+#### 3.5.3 安装配置kube-apiserver服务
+
 ```bash
 [root@gysl-m ~]# tar -xzf kubernetes-server-linux-amd64.tar.gz
 [root@gysl-m ~]# mv kubernetes/server/bin/kube-apiserver /usr/local/bin/
@@ -207,8 +228,10 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.
 - logtostderr: 设置为false表示将日志写入文件，不写入stderr。
 - log-dir: 日志目录。
 - v: 日志级别。
-### 3.5.4 准备kubeconfig文件
+#### 3.5.4 准备kubeconfig文件
+
 文件内容如下：
+
 ```yaml
 apiVersion: v1
 kind: Config
@@ -248,7 +271,9 @@ contexts:
   name: gysl-context
 current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
 ```
-### 3.5.5 安装配置kube-controller-manager服务
+
+#### 3.5.5 安装配置kube-controller-manager服务
+
 ```bash
 [root@gysl-m ~]# mv kubernetes/server/bin/kube-controller-manager /usr/local/bin/
 [root@gysl-m ~]# echo \
@@ -288,7 +313,9 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-controller
    Active: active (running) 
 ```
 kube-controller-manager服务安装配置成功！
-### 3.5.6 安装配置kube-scheduler服务
+
+#### 3.5.6 安装配置kube-scheduler服务
+
 ```bash
 [root@gysl-m ~]# echo \
 'KUBE_SCHEDULER_ARGS="\
@@ -325,8 +352,8 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-scheduler.
    Active: active (running) 
 ```
 kube-scheduler服务安装配置成功。
-## 3.6 部署Node节点
-### 3.6.1 准备CA证书
+### 3.6 部署Node节点
+#### 3.6.1 准备CA证书
 ```bash
 [root@gysl-n1 ~]# mkdir -p /etc/kubernetes/ssl && cd /etc/kubernetes/ssl
 [root@gysl-n1 ssl]# scp root@gysl-m:/etc/kubernetes/ssl/ca.{pem,key} .
@@ -347,7 +374,7 @@ Signature ok
 subject=/CN=172.31.3.12
 Getting CA Private Key
 ```
-### 3.6.2 准备kubeconfig文件
+#### 3.6.2 准备kubeconfig文件
 文件内容如下：
 ```yaml
 apiVersion: v1
@@ -390,7 +417,7 @@ contexts:
   name: gysl-context
 current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
 ```
-### 3.6.3 安装配置kube-kubelet服务
+#### 3.6.3 安装配置kube-kubelet服务
 ```bash
 [root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kubelet /usr/local/bin/
 kubelet                                                                                                                                      100%  108MB  73.4MB/s   00:01
@@ -430,7 +457,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-kubelet.se
    Active: active (running)
 ```
 kube-kubelet服务安装配置成功！
-### 3.6.4 安装配置kube-proxy服务
+#### 3.6.4 安装配置kube-proxy服务
 ```bash
 [root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kube-proxy /usr/local/bin/
 kube-proxy            100%   33MB  42.4MB/s   00:00
@@ -465,7 +492,9 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-proxy.serv
 [root@gysl-n1 ~]# systemctl status kube-proxy
 
 ```
+
 ### 3.7 导入相关镜像
+
 ```bash
 [root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-apiserver.tar
 37ec61735c38: Loading layer [==================================================>]  138.6MB/138.6MB
@@ -488,9 +517,13 @@ k8s.gcr.io/kube-apiserver            v1.13.0             f1ff9b7e3d6e        6 w
 k8s.gcr.io/kube-controller-manager   v1.13.0             d82530ead066        6 weeks ago         146MB
 k8s.gcr.io/kube-scheduler            v1.13.0             9508b7d8008d        6 weeks ago         79.6MB
 ```
-### 3.7 配置kubectl工具
-### 
-# 参考资料
+
+### 3.8 配置kubectl工具
+
+### 3.9
+
+## 参考资料
+
 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
 
 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
