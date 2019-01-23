@@ -6,71 +6,84 @@
 
 ## 三 操作步骤
 
-### 3.1 执行脚本
+### 3.1 针对性初始化设置
+
+在所有主机上执行脚本KubernetesInstall-01.sh。
 
 ```bash
-
-[root@gysl-m ~]# sh k8s-init.sh
-● firewalld.service - firewalld - dynamic firewall daemon
-   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: enabled)
-   Active: inactive (dead) since 一 2019-01-14 18:58:32 CST; 
-...
-net.ipv4.ip_forward = 1
-Enforcing
+[root@gysl-master ~]# sh KubernetesInstall-01.sh
 ```
 
-k8s-init.sh脚本内容如下：
+KubernetesInstall-01.sh脚本内容如下：
 
 ```bash
-#/bin/bash
+#!/bin/bash
+# Initialize the machine. This needs to be executed on every machine.
+# Add host domain name.
+cat>>/etc/hosts<<EOF
+172.31.2.11 gysl-master
+172.31.2.12 gysl-node1
+172.31.2.13 gysl-node2
+EOF
+# Modify related kernel parameters.
+cat>/etc/sysctl.d/kubernetes.conf<<EOF
+net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl -p /etc/sysctl.d/kubernetes.conf>&/dev/null
+# Turn off and disable the firewalld.
 systemctl stop firewalld
-systemctl enable firewalld
-systemctl status firewalld
-echo 'net.ipv4.ip_forward=1'>>/etc/sysctl.conf
-echo 'net.bridge.bridge-nf-call-iptables = 1'>>/etc/sysctl.conf
-echo 'net.bridge.bridge-nf-call-ip6tables = 1'>>/etc/sysctl.conf
-sysctl -p
-sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+systemctl disable firewalld
+# Disable the SELinux.
+sed -i 's/=enforcing/=disabled/' /etc/selinux/config
+# Disable the swap .
+sed -i 's/^.*swap/#&/g' /etc/fstab
+# Reboot the machine.
 reboot
 ```
 
 ### 3.2 安装Docker并设置
 
-```bash
-curl -C - -O http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-mv docker-ce.repo /etc/yum.repos.d/
-yum remove docker \
-                  docker-client \
-                  docker-client-latest \
-                  docker-common \
-                  docker-latest \
-                  docker-latest-logrotate \
-                  docker-logrotate \
-                  docker-selinux \
-                  docker-engine-selinux \
-                  docker-engine
-yum list docker-ce --showduplicates|grep "^doc"|sort -r
-yum -y install docker-ce-18.06.0.ce-3.el7
-systemctl start docker
-systemctl enable docker
-```
-
-**注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的，具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
-
-### 3.3 配置主机域名
+在所有主机上执行脚本KubernetesInstall-02.sh。
 
 ```bash
-[root@gysl-m ~]# echo '172.31.3.11 gysl-m
-172.31.3.12 gysl-n1'>>/etc/hosts
-[root@gysl-n1 ~]# echo '172.31.3.11 gysl-m
-172.31.3.12 gysl-n1'>>/etc/hosts
+[root@gysl-master ~]# sh KubernetesInstall-02.sh
 ```
 
-每个节点都需要进行配置。
+脚本内容如下：
 
-### 3.4 下载相关二进制包
+```bash
+#!/bin/bash
+# Install the Docker engine. This needs to be executed on every machine.
+curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
+if [ $? -eq 0 ] ;
+    then 
+        yum remove docker \
+                      docker-client \
+                      docker-client-latest \
+                      docker-common \
+                      docker-latest \
+                      docker-latest-logrotate \
+                      docker-logrotate \
+                      docker-selinux \
+                      docker-engine-selinux \
+                      docker-engine>&/dev/null
+        yum list docker-ce --showduplicates|grep "^doc"|sort -r
+        yum -y install docker-ce-18.06.0.ce-3.el7
+        rm -f /etc/yum.repos.d/docker-ce.repo
+        systemctl enable docker && systemctl start docker && systemctl status docker
+    else
+        echo "Install failed! Please try again! ";
+        exit 110
+fi
+```
 
-#### 3.4.1 下载 Kubernetes Server 并校验
+**注意：**以上步骤需要在每一个节点上执行。如果启用了swap，那么是需要禁用的（脚本KubernetesInstall-01.sh已有涉及），具体可以通过 free 命令查看详情。另外，还需要关注各个节点上的时间同步情况。
+
+### 3.3 下载相关二进制包
+
+#### 3.3.1 下载 Kubernetes Server 并校验
 
 ```bash
 [root@gysl-m ~]# curl -C - -O https://storage.googleapis.com/kubernetes-release/release/v1.13.0/kubernetes-server-linux-amd64.tar.gz
