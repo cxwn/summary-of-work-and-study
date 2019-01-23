@@ -20,6 +20,7 @@ Enforcing
 ```
 
 k8s-init.sh脚本内容如下：
+
 ```bash
 #/bin/bash
 systemctl stop firewalld
@@ -143,7 +144,9 @@ Getting CA Private Key
 [root@gysl-m ssl]# ls
 ca.key  ca.pem  ca.srl  client.crt  client.csr  client.key  server.crt  server.csr  server.key
 ```
+
 #### 3.5.2 安装配置etcd服务
+
 ```bash
 [root@gysl-m ~]# tar -xvzf etcd-v3.2.26-linux-amd64.tar.gz
 [root@gysl-m ~]# mv etcd-v3.2.26-linux-amd64/{etcd,etcdctl} /usr/local/bin/
