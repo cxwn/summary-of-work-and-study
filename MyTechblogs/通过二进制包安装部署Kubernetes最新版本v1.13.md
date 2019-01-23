@@ -83,30 +83,38 @@ fi
 
 ### 3.3 下载相关二进制包
 
-#### 3.3.1 下载 Kubernetes Server 并校验
+执行脚本KubernetesInstall-03.sh。
 
 ```bash
-[root@gysl-m ~]# curl -C - -O https://storage.googleapis.com/kubernetes-release/release/v1.13.0/kubernetes-server-linux-amd64.tar.gz
-** Resuming transfer from byte position 5073666
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  393M  100  393M    0     0   687k      0  0:09:45  0:09:45 --:--:--  717k
-[root@gysl-m ~]# sha512sum kubernetes-server-linux-amd64.tar.gz
-a8e3d457e5bcc1c09eeb66111e8dd049d6ba048c3c0fa90a61814291afdcde93f1c6dbb07beef090d1d8a9958402ff843e9af23ae9f069c17c0a7c6ce4034686  kubernetes-server-linux-amd64.tar.gz
+[root@gysl-master ~]# sh KubernetesInstall-03.sh
 ```
 
-#### 3.4.2 下载etcd
+脚本内容如下：
 
 ```bash
-[root@gysl-m ~]# while true;do curl -L -C - -O  https://github.com/etcd-io/etcd/releases/download/v3.2.26/etcd-v3.2.26-linux-amd64.tar.gz;if [ $? -eq 0 ];then break; fi;done
-** Resuming transfer from byte position 2513511
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   621    0   621    0     0     97      0 --:--:--  0:00:06 --:--:--   160
-  2 7887k    2  203k    0     0   2389      0  0:56:20  0:01:27  0:54:53     0
+#!/bin/bash
+# Download relevant softwares. Please verify sha512 yourself.
+while true;
+    do
+        echo "Downloading, please wait a moment." &&\
+        curl -L -C - -O https://dl.k8s.io/v1.13.2/kubernetes-server-linux-amd64.tar.gz && \
+        curl -L -C - -O https://github.com/etcd-io/etcd/releases/download/v3.2.26/etcd-v3.2.26-linux-amd64.tar.gz && \
+        curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 && \
+        curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 && \
+        curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64
+        if [ $? -eq 0 ];
+            then
+                echo "Congratulations! All software packages have been downloaded."
+                break
+        fi
+    done
 ```
-网络不太好，只能这么做了。
-### 3.5 部署Master节点
+
+kubernetes-server-linux-amd64.tar.gz包括了kubernetes的所有主要组件，其他无需下载。etcd-v3.2.26-linux-amd64.tar.gz是部署etcd需要用到的包。其余的是cfssl相关的软件，暂不深究。网络原因，只能这么做了，这个过程可能需要一会儿。
+
+### 3.4 部署etcd集群
+
+### 3.4 部署Master节点
 #### 3.5.1 创建CA证书
 ```bash
 [root@gysl-m ~]# mkdir -p /etc/kubernetes/ssl
