@@ -14,7 +14,7 @@
 [root@gysl-master ~]# sh KubernetesInstall-01.sh
 ```
 
-KubernetesInstall-01.sh脚本内容如下：
+脚本内容如下：
 
 ```bash
 #!/bin/bash
