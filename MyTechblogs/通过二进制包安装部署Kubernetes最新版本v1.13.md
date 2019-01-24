@@ -8,7 +8,7 @@
 
 ### 3.1 针对性初始化设置
 
-在所有主机上执行脚本KubernetesInstall-01.sh。
+在所有主机上执行脚本KubernetesInstall-01.sh，以Master节点为例。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-01.sh
@@ -45,7 +45,7 @@ reboot
 
 ### 3.2 安装Docker并设置
 
-在所有主机上执行脚本KubernetesInstall-02.sh。
+在所有主机上执行脚本KubernetesInstall-02.sh，以Master节点为例。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-02.sh
@@ -110,7 +110,7 @@ while true;
     done
 ```
 
-kubernetes-server-linux-amd64.tar.gz包括了kubernetes的所有主要组件，其他无需下载。etcd-v3.2.26-linux-amd64.tar.gz是部署etcd需要用到的包。其余的是cfssl相关的软件，暂不深究。网络原因，只能这么做了，这个过程可能需要一会儿。
+kubernetes-server-linux-amd64.tar.gz包括了kubernetes的主要组件，无需下载其他包。etcd-v3.2.26-linux-amd64.tar.gz是部署etcd需要用到的包。其余的是cfssl相关的软件，暂不深究。网络原因，只能这么做了，这个过程可能需要一会儿。
 
 ### 3.4 部署etcd集群
 
