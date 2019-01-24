@@ -43,7 +43,7 @@ sed -i.bak 's/^.*swap/#&/g' /etc/fstab
 reboot
 ```
 
-### 3.2 安装Docker并设置
+### 3.2 安装Docker Engine并设置
 
 在所有主机上执行脚本KubernetesInstall-02.sh，以Master节点为例。
 
@@ -244,7 +244,9 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.
    Loaded: loaded (/usr/lib/systemd/system/kube-apiserver.service; enabled; vendor preset: disabled)
    Active: active (running)
 ```
+
 至此，kube-apiser部署成功。一些启动参数如下：
+
 - etcd_servers: 指定etcd服务的URL。
 - insecure-bind-address： apiserver绑定主机的非安全端口，设置0.0.0.0表示绑定所有IP地址
 - insecure-port: apiserver绑定主机的非安全端口号，默认为8080。
@@ -254,6 +256,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.
 - logtostderr: 设置为false表示将日志写入文件，不写入stderr。
 - log-dir: 日志目录。
 - v: 日志级别。
+  
 #### 3.5.4 准备kubeconfig文件
 
 文件内容如下：
@@ -277,6 +280,7 @@ contexts:
   name: gysl-context
 current-context: gysl-context
 ```
+
 ```bash
 [root@gysl-m ~]# echo \
 'apiVersion: v1
@@ -338,6 +342,7 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-controller
    Loaded: loaded (/usr/lib/systemd/system/kube-controller-manager.service; enabled; vendor preset: disabled)
    Active: active (running) 
 ```
+
 kube-controller-manager服务安装配置成功！
 
 #### 3.5.6 安装配置kube-scheduler服务
@@ -377,9 +382,13 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-scheduler.
    Loaded: loaded (/usr/lib/systemd/system/kube-scheduler.service; enabled; vendor preset: disabled)
    Active: active (running) 
 ```
+
 kube-scheduler服务安装配置成功。
+
 ### 3.6 部署Node节点
+
 #### 3.6.1 准备CA证书
+
 ```bash
 [root@gysl-n1 ~]# mkdir -p /etc/kubernetes/ssl && cd /etc/kubernetes/ssl
 [root@gysl-n1 ssl]# scp root@gysl-m:/etc/kubernetes/ssl/ca.{pem,key} .
@@ -400,8 +409,11 @@ Signature ok
 subject=/CN=172.31.3.12
 Getting CA Private Key
 ```
+
 #### 3.6.2 准备kubeconfig文件
+
 文件内容如下：
+
 ```yaml
 apiVersion: v1
 kind: Config
@@ -422,6 +434,7 @@ contexts:
   name: gysl-context
 current-context: gysl-context
 ```
+
 ```bash
 [root@gysl-n1 ssl]# echo \
 'apiVersion: v1
@@ -443,7 +456,9 @@ contexts:
   name: gysl-context
 current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
 ```
+
 #### 3.6.3 安装配置kube-kubelet服务
+
 ```bash
 [root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kubelet /usr/local/bin/
 kubelet                                                                                                                                      100%  108MB  73.4MB/s   00:01
@@ -482,8 +497,10 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/kube-kubelet.se
    Loaded: loaded (/usr/lib/systemd/system/kube-kubelet.service; enabled; vendor preset: disabled)
    Active: active (running)
 ```
+
 kube-kubelet服务安装配置成功！
 #### 3.6.4 安装配置kube-proxy服务
+
 ```bash
 [root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kube-proxy /usr/local/bin/
 kube-proxy            100%   33MB  42.4MB/s   00:00
@@ -553,3 +570,5 @@ k8s.gcr.io/kube-scheduler            v1.13.0             9508b7d8008d        6 w
 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
 
 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
+
+[cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
