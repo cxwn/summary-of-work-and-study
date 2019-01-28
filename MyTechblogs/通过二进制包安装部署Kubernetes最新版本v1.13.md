@@ -115,6 +115,106 @@ kubernetes-server-linux-amd64.tar.gz包括了kubernetes的主要组件，无需�
 
 ### 3.4 部署etcd集群
 
+#### 3.4.1 创建CA证书
+
+在Master执行脚本KubernetesInstall-04.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-04.sh
+2019/01/28 16:29:47 [INFO] generating a new CA key and certificate from CSR
+2019/01/28 16:29:47 [INFO] generate received request
+2019/01/28 16:29:47 [INFO] received CSR
+2019/01/28 16:29:47 [INFO] generating key: rsa-2048
+2019/01/28 16:29:47 [INFO] encoded CSR
+2019/01/28 16:29:47 [INFO] signed certificate with serial number 368034386524991671795323408390048460617296625670
+2019/01/28 16:29:47 [INFO] generate received request
+2019/01/28 16:29:47 [INFO] received CSR
+2019/01/28 16:29:47 [INFO] generating key: rsa-2048
+2019/01/28 16:29:48 [INFO] encoded CSR
+2019/01/28 16:29:48 [INFO] signed certificate with serial number 714486490152688826461700674622674548864494534798
+2019/01/28 16:29:48 [WARNING] This certificate lacks a "hosts" field. This makes it unsuitable for
+websites. For more information see the Baseline Requirements for the Issuance and Management
+of Publicly-Trusted Certificates, v.1.1.6, from the CA/Browser Forum (https://cabforum.org);
+specifically, section 10.2.3 ("Information Requirements").
+/etc/etcd/ssl/ca-key.pem  /etc/etcd/ssl/ca.pem  /etc/etcd/ssl/server-key.pem  /etc/etcd/ssl/server.pem
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+mv cfssl* /usr/local/bin/
+chmod +x /usr/local/bin/cfssl*
+ETCD_SSL=/etc/etcd/ssl
+mkdir -p $ETCD_SSL
+# Create some CA certificates for etcd cluster.
+cat<<EOF>$ETCD_SSL/ca-config.json
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "www": {
+         "expiry": "87600h",
+         "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ]
+      }
+    }
+  }
+}
+EOF
+cat<<EOF>$ETCD_SSL/ca-csr.json
+{
+    "CN": "etcd CA",
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "L": "Beijing",
+            "ST": "Beijing"
+        }
+    ]
+}
+EOF
+cat<<EOF>$ETCD_SSL/server-csr.json
+{
+    "CN": "etcd",
+    "hosts": [
+    "172.31.2.11",
+    "172.31.2.12",
+    "172.31.2.13"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "L": "Beijing",
+            "ST": "Beijing"
+        }
+    ]
+}
+EOF
+cd $ETCD_SSL
+cfssl_linux-amd64 gencert -initca ca-csr.json | cfssljson_linux-amd64 -bare ca -
+cfssl_linux-amd64 gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=www server-csr.json | cfssljson_linux-amd64 -bare server
+cd ~
+# ca-key.pem  ca.pem  server-key.pem  server.pem
+ls $ETCD_SSL/*.pem
+```
+
+#### 3.4.2 配置etcd服务
+
 ### 3.5 部署Master节点
 
 #### 3.5.1 创建CA证书
