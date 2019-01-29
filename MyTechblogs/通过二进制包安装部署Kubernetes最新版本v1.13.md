@@ -215,6 +215,144 @@ ls $ETCD_SSL/*.pem
 
 #### 3.4.2 配置etcd服务
 
+##### 3.4.2.1 在Master节点上进行配置
+
+在Master执行脚本KubernetesInstall-05.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-05.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy and configurate etcd service on the master node.
+ETCD_CONF=/etc/etcd/etcd.conf
+ETCD_SSL=/etc/etcd/ssl
+ETCD_SERVICE=/usr/lib/systemd/system/etcd.service
+tar -xzf etcd-v3.3.11-linux-amd64.tar.gz
+cp -p etcd-v3.3.11-linux-amd64/etc* /usr/local/bin/
+
+# The etcd configuration file. 
+cat>$ETCD_CONF<<EOF
+#[Member]
+ETCD_NAME="etcd-01"
+ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+ETCD_LISTEN_PEER_URLS="https://172.31.2.11:2380"
+ETCD_LISTEN_CLIENT_URLS="https://172.31.2.11:2379"
+
+#[Clustering]
+ETCD_INITIAL_ADVERTISE_PEER_URLS="https://172.31.2.11:2380"
+ETCD_ADVERTISE_CLIENT_URLS="https://172.31.2.11:2379"
+ETCD_INITIAL_CLUSTER="etcd-01=https://172.31.2.11:2380,etcd-02=https://172.31.2.12:2380,etcd-03=https://172.31.2.13:2380"
+ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster"
+ETCD_INITIAL_CLUSTER_STATE="new"
+EOF
+
+# The etcd servcie configuration file.
+cat>$ETCD_SERVICE<<EOF
+[Unit]
+Description=Etcd Server
+After=network.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile=$ETCD_CONF
+ExecStart=/usr/local/bin/etcd \
+--name=\${ETCD_NAME} \
+--data-dir=\${ETCD_DATA_DIR} \
+--listen-peer-urls=\${ETCD_LISTEN_PEER_URLS} \
+--listen-client-urls=\${ETCD_LISTEN_CLIENT_URLS},http://127.0.0.1:2379 \
+--advertise-client-urls=\${ETCD_ADVERTISE_CLIENT_URLS} \
+--initial-advertise-peer-urls=\${ETCD_INITIAL_ADVERTISE_PEER_URLS} \
+--initial-cluster=\${ETCD_INITIAL_CLUSTER} \
+--initial-cluster-token=\${ETCD_INITIAL_CLUSTER_TOKEN} \
+--initial-cluster-state=new \
+--cert-file=/etc/etcd/ssl/server.pem \
+--key-file=/etc/etcd/ssl/server-key.pem \
+--peer-cert-file=/etc/etcd/ssl/server.pem \
+--peer-key-file=/etc/etcd/ssl/server-key.pem \
+--trusted-ca-file=/etc/etcd/ssl/ca.pem \
+--peer-trusted-ca-file=/etc/etcd/ssl/ca.pem
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable etcd.service --now
+systemctl status etcd
+```
+
+##### 3.4.2.2 在Node1节点上进行配置
+
+在Node1执行脚本KubernetesInstall-06.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-06.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy etcd on the node1.
+ETCD_SSL=/etc/etcd/ssl
+mkdir -p $ETCD_SSL
+scp gysl-master:~/etcd-v3.3.11-linux-amd64.tar.gz .
+scp gysl-master:$ETCD_SSL/{ca*pem,server*pem} $ETCD_SSL/
+scp gysl-master:/etc/etcd/etcd.conf /etc/etcd/
+scp gysl-master:/usr/lib/systemd/system/etcd.service /usr/lib/systemd/system/
+tar -xvzf etcd-v3.3.11-linux-amd64.tar.gz
+mv ~/etcd-v3.3.11-linux-amd64/etcd* /usr/local/bin/
+sed -i '/ETCD_NAME/{s/etcd-01/etcd-02/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_LISTEN_PEER_URLS/{s/2.11/2.12/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_LISTEN_CLIENT_URLS/{s/2.11/2.12/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_INITIAL_ADVERTISE_PEER_URLS/{s/2.11/2.12/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_ADVERTISE_CLIENT_URLS/{s/2.11/2.12/g}' /etc/etcd/etcd.conf
+rm -rf ~/etcd-v3.3.11-linux-amd64*
+systemctl daemon-reload
+systemctl enable etcd.service --now
+systemctl status etcd
+```
+
+##### 3.4.2.3 在Node2节点上进行配置
+
+在Node2执行脚本KubernetesInstall-07.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-07.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy etcd on the node2.
+ETCD_SSL=/etc/etcd/ssl
+mkdir -p $ETCD_SSL
+scp gysl-master:~/etcd-v3.3.11-linux-amd64.tar.gz .
+scp gysl-master:$ETCD_SSL/{ca*pem,server*pem} $ETCD_SSL/
+scp gysl-master:/etc/etcd/etcd.conf /etc/etcd/
+scp gysl-master:/usr/lib/systemd/system/etcd.service /usr/lib/systemd/system/
+tar -xvzf etcd-v3.3.11-linux-amd64.tar.gz
+mv ~/etcd-v3.3.11-linux-amd64/etcd* /usr/local/bin/
+sed -i '/ETCD_NAME/{s/etcd-01/etcd-03/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_LISTEN_PEER_URLS/{s/2.11/2.13/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_LISTEN_CLIENT_URLS/{s/2.11/2.13/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_INITIAL_ADVERTISE_PEER_URLS/{s/2.11/2.13/g}' /etc/etcd/etcd.conf
+sed -i '/ETCD_ADVERTISE_CLIENT_URLS/{s/2.11/2.13/g}' /etc/etcd/etcd.conf
+rm -rf ~/etcd-v3.3.11-linux-amd64*
+systemctl daemon-reload
+systemctl enable etcd.service --now
+systemctl status etcd
+```
+
 ### 3.5 部署Master节点
 
 #### 3.5.1 创建CA证书
