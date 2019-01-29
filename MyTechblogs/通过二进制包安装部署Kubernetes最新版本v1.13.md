@@ -1,4 +1,4 @@
-# KubernetesInstall
+# Kubernetes Install By Binary Packages
 
 ## 一 背景
 
@@ -58,7 +58,7 @@ reboot
 # Install the Docker engine. This needs to be executed on every machine.
 curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
 if [ $? -eq 0 ] ;
-    then 
+    then
         yum remove docker \
                       docker-client \
                       docker-client-latest \
@@ -352,6 +352,24 @@ systemctl daemon-reload
 systemctl enable etcd.service --now
 systemctl status etcd
 ```
+
+#### 3.4.3 验证etcd集群是否部署成功
+
+执行以下命令：
+
+```bash
+[root@gysl-master ~]# etcdctl \
+--ca-file=/etc/etcd/ssl/ca.pem \
+--cert-file=/etc/etcd/ssl/server.pem \
+--key-file=/etc/etcd/ssl/server-key.pem \
+--endpoints="https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379" cluster-health
+member 82184ce461853bed is healthy: got healthy result from https://172.31.2.12:2379
+member d85d48cef1ccfeaf is healthy: got healthy result from https://172.31.2.13:2379
+member fe6e7c664377ad3b is healthy: got healthy result from https://172.31.2.11:2379
+cluster is healthy
+```
+
+"cluster is healthy"说明etcd集群部署成功！
 
 ### 3.5 部署Master节点
 
