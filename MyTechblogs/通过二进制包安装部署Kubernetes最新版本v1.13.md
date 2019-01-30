@@ -941,36 +941,76 @@ for csr in $CSRS;
     done
 ```
 
-### 3.7 导入相关镜像
+#### 3.7.4 查看集群状态
 
 ```bash
-[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-apiserver.tar
-37ec61735c38: Loading layer [==================================================>]  138.6MB/138.6MB
-Loaded image: k8s.gcr.io/kube-apiserver:v1.13.0
-[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-controller-manager.tar
-474fef97be8a: Loading layer [==================================================>]  103.9MB/103.9MB
-Loaded image: k8s.gcr.io/kube-controller-manager:v1.13.0
-[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-scheduler.tar
-5fe6d025ca50: Loading layer [==================================================>]  43.87MB/43.87MB
-f6c506417998: Loading layer [==================================================>]  37.27MB/37.27MB
-Loaded image: k8s.gcr.io/kube-scheduler:v1.13.0
-[root@gysl-m ~]# docker load -i kubernetes/server/bin/kube-proxy.tar
-e5a609b37e16: Loading layer [==================================================>]  3.403MB/3.403MB
-232e8910ede8: Loading layer [==================================================>]  34.81MB/34.81MB
-Loaded image: k8s.gcr.io/kube-proxy:v1.13.0
-[root@gysl-m ~]# docker images
-REPOSITORY                           TAG                 IMAGE ID            CREATED             SIZE
-k8s.gcr.io/kube-proxy                v1.13.0             8fa56d18961f        6 weeks ago         80.2MB
-k8s.gcr.io/kube-apiserver            v1.13.0             f1ff9b7e3d6e        6 weeks ago         181MB
-k8s.gcr.io/kube-controller-manager   v1.13.0             d82530ead066        6 weeks ago         146MB
-k8s.gcr.io/kube-scheduler            v1.13.0             9508b7d8008d        6 weeks ago         79.6MB
+[root@gysl-master ~]# kubectl get cs
+NAME                 STATUS    MESSAGE             ERROR
+controller-manager   Healthy   ok
+scheduler            Healthy   ok
+etcd-2               Healthy   {"health":"true"}
+etcd-1               Healthy   {"health":"true"}
+etcd-0               Healthy   {"health":"true"}
+[root@gysl-master ~]# kubectl get node
+NAME          STATUS   ROLES    AGE   VERSION
+172.31.2.12   Ready    <none>   11m   v1.13.2
+172.31.2.13   Ready    <none>   11m   v1.13.2
 ```
 
-### 3.8 配置kubectl工具
+### 3.8 运行一个测试
 
-### 3.9
+```bash
+[root@gysl-master ~]#  kubectl run nginx --image=nginx --replicas=3
+kubectl run --generator=deployment/apps.v1 is DEPRECATED and will be removed in a future version. Use kubectl run --generator=run-pod/v1 or kubectl create instead.
+deployment.apps/nginx created
+[root@gysl-master ~]# kubectl expose deployment nginx --port=88 --target-port=80 --type=NodePort
+service/nginx exposed
+[root@gysl-master ~]# kubectl get pods
+NAME                     READY   STATUS              RESTARTS   AGE
+nginx-7cdbd8cdc9-7h946   0/1     ContainerCreating   0          33s
+nginx-7cdbd8cdc9-vtkqf   0/1     ContainerCreating   0          33s
+nginx-7cdbd8cdc9-wdjtj   0/1     ContainerCreating   0          33s
+[root@gysl-master ~]# kubectl get svc
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP        8h
+nginx        NodePort    10.0.0.2     <none>        88:46705/TCP   28s
+[root@gysl-master ~]# kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-7cdbd8cdc9-7h946   1/1     Running   0          2m4s
+nginx-7cdbd8cdc9-vtkqf   1/1     Running   0          2m4s
+nginx-7cdbd8cdc9-wdjtj   1/1     Running   0          2m4s
+```
 
-## 参考资料
+```bash
+[root@gysl-node1 ~]# curl http://10.0.0.2:88
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+```
+
+## 四 参考资料
 
 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
 
