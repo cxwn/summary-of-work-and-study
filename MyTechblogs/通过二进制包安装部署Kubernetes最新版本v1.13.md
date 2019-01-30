@@ -102,7 +102,7 @@ while true;
         curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 && \
         curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 && \
         curl -L -C - -O https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64 \
-        curl -L -C - -O https://github.com/coreos/flannel/releases/download/v0.10.0/flannel-v0.10.0-linux-amd64.tar.gz
+        curl -L -C - -O https://github.com/coreos/flannel/releases/download/v0.11.0/flannel-v0.11.0-linux-amd64.tar.gz
         if [ $? -eq 0 ];
             then
                 echo "Congratulations! All software packages have been downloaded."
@@ -369,7 +369,19 @@ member fe6e7c664377ad3b is healthy: got healthy result from https://172.31.2.11:
 cluster is healthy
 ```
 
-"cluster is healthy"说明etcd集群部署成功！
+"cluster is healthy"说明etcd集群部署成功！如果存在问题，那么首先看日志：/var/log/message 或 journalctl -u etcd，找到问题，逐一解决。命令看起来不是那么直观，可以直接复制下面的命令来进行检验：
+
+```bash
+etcdctl \
+--ca-file=/etc/etcd/ssl/ca.pem \
+--cert-file=/etc/etcd/ssl/server.pem \
+--key-file=/etc/etcd/ssl/server-key.pem \
+--endpoints="https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379" cluster-health
+```
+
+### 3.5 部署Flannel网络
+
+由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。
 
 ### 3.5 部署Master节点
 
