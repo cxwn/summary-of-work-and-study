@@ -83,7 +83,7 @@ fi
 
 ### 3.3 下载相关二进制包
 
-在Master执行脚本KubernetesInstall-03.sh。
+在Master执行脚本KubernetesInstall-03.sh即可进行下载。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-03.sh
@@ -111,7 +111,7 @@ while true;
     done
 ```
 
-kubernetes-server-linux-amd64.tar.gz包括了kubernetes的主要组件，无需下载其他包。etcd-v3.2.26-linux-amd64.tar.gz是部署etcd需要用到的包。其余的是cfssl相关的软件，暂不深究。网络原因，只能这么做了，这个过程可能需要一会儿。
+kubernetes-server-linux-amd64.tar.gz包括了kubernetes的主要组件，无需下载其他包。etcd-v3.2.26-linux-amd64.tar.gz是部署etcd需要用到的包。其余的是cfssl相关的软件，暂不深究。网络原因，只能写脚本来下载了，这个过程可能需要一会儿。
 
 ### 3.4 部署etcd集群
 
@@ -381,7 +381,13 @@ etcdctl \
 
 ### 3.5 部署Flannel网络
 
-由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。在每一个节点都需要进行配置，执行脚本KubernetesInstall-08.sh。脚本内容如下：
+由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。在每一个节点都需要进行配置，执行脚本KubernetesInstall-08.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-08.sh
+```
+
+脚本内容如下：
 
 ```bash
 #!/bin/bash
@@ -440,13 +446,13 @@ systemctl status docker
 ip address show
 ```
 
-在脚本执行之前需要把flannel安装包拷贝到用户的HOME目录。脚本执行完毕之后需要检查各服务的状态，确保docker0和flannel.1在同一网段。
+在脚本执行之前需要把Flannel安装包拷贝到用户的HOME目录。脚本执行完毕之后需要检查各服务的状态，确保docker0和flannel.1在同一网段。
 
 ### 3.6 部署Master节点
 
 #### 3.6.1 创建CA证书
 
-这一步中创建了kube-apiserver和kube-proxy相关的CA证书，在Master节点执行脚本：
+这一步中创建了kube-apiserver和kube-proxy相关的CA证书，在Master节点执行脚本KubernetesInstall-09.sh。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-09.sh
@@ -721,10 +727,10 @@ systemctl status kube-controller-manager.service
 
 #### 3.6.5 查看集群状态
 
-直接执行脚本KubernetesInstall-12.sh。
+直接执行脚本KubernetesInstall-13.sh。
 
 ```bash
-[root@gysl-master ~]# sh KubernetesInstall-12.sh
+[root@gysl-master ~]# sh KubernetesInstall-13.sh
 ```
 
 脚本内容如下：
@@ -748,274 +754,7 @@ etcd-0               Healthy   {"health":"true"}
 etcd-1               Healthy   {"health":"true"}
 ```
 
-```bash
-[root@gysl-m ~]# mkdir -p /etc/kubernetes/ssl
-[root@gysl-m ~]# cd /etc/kubernetes/ssl/
-[root@gysl-m ssl]# openssl genrsa -out ca.key 2048
-Generating RSA private key, 2048 bit long modulus
-..................+++
-................+++
-e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl req -x509 -new -nodes -key ca.key -subj "/CN=k8s-master" -days 5000 -out ca.pem
-[root@gysl-m ssl]# echo \
-'[req]
-req_extensions = v3_req
-distinguished_name = req_distinguished_name
-[req_distinguished_name]
-[ v3_req ]
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
-subjectAltName = @alt_names
-[alt_names]
-DNS.1 = kubernetes
-DNS.2 = kubernetes.default
-DNS.3 = kubernetes.default.svc
-DNS.4 = kubernetes.default.svc.cluster.local
-DNS.5 = k8s_master
-IP.1 = 10.1.1.8
-IP.2 = 172.31.3.11'>../openssl.conf
-[root@gysl-m ssl]# openssl genrsa -out server.key 2048
-Generating RSA private key, 2048 bit long modulus
-...........+++
-..........................................................+++
-e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl req -new -key server.key -subj "/CN=gysl-m" -config ../openssl.conf -out server.csr
-[root@gysl-m ssl]# openssl x509 -req -in server.csr -CA ca.pem -CAkey ca.key -CAcreateserial -days 5000 -extensions v3_req -extfile ../openssl.conf -out server.crt
-Signature ok
-subject=/CN=gysl-m
-Getting CA Private Key
-[root@gysl-m ssl]# openssl genrsa -out client.key 2048
-Generating RSA private key, 2048 bit long modulus
-...............................+++
-...............................................................+++
-e is 65537 (0x10001)
-[root@gysl-m ssl]# openssl req -new -key client.key -subj "/CN=gysl-m" -out client.csr
-[root@gysl-m ssl]# openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client.crt -days 5000
-Signature ok
-subject=/CN=gysl-m
-Getting CA Private Key
-[root@gysl-m ssl]# ls
-ca.key  ca.pem  ca.srl  client.crt  client.csr  client.key  server.crt  server.csr  server.key
-```
-
-#### 3.5.2 安装配置etcd服务
-
-```bash
-[root@gysl-m ~]# tar -xvzf etcd-v3.2.26-linux-amd64.tar.gz
-[root@gysl-m ~]# mv etcd-v3.2.26-linux-amd64/{etcd,etcdctl} /usr/local/bin/
-[root@gysl-m ~]# echo \
-'[Unit]
-Description=Etcd Server
-After=network.target
-[Service]
-Type=simple
-EnvironmentFile=-/etc/etcd.conf
-WorkingDirectory=/var/lib/etcd
-ExecStart=/usr/local/bin/etcd
-Restart=on-failure
-[Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/etcd.service
-[root@gysl-m ~]# mkdir -p /var/lib/etcd/
-[root@gysl-m ~]# touch /etc/etcd.conf
-[root@gysl-m ~]# systemctl daemon-reload
-[root@gysl-m ~]# systemctl start etcd
-[root@gysl-m ~]# systemctl enable etcd
-Created symlink from /etc/systemd/system/multi-user.target.wants/etcd.service to /usr/lib/systemd/system/etcd.service.
-[root@gysl-m ~]# etcdctl cluster-health
-member 8e9e05c52164694d is healthy: got healthy result from http://localhost:2379
-cluster is healthy
-```
-
-#### 3.5.3 安装配置kube-apiserver服务
-
-```bash
-[root@gysl-m ~]# tar -xzf kubernetes-server-linux-amd64.tar.gz
-[root@gysl-m ~]# mv kubernetes/server/bin/kube-apiserver /usr/local/bin/
-[root@gysl-m ~]# mkdir /etc/kubernetes/
-[root@gysl-m ~]# echo \
-'KUBE_API_ARGS="--advertise-address=172.31.3.11 \
---storage-backend=etcd3 \
---etcd-servers=http://172.31.3.11:2379 \
---bind-address=172.31.3.11 \
---service-cluster-ip-range=10.1.1.0/24 \
---service-node-port-range=30000-65535 \
---enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
---logtostderr=false \
---log-dir=/var/log/kubernetes/apiserver \
---v=2 \
---client-ca-file=/etc/kubernetes/ssl/ca.pem \
---tls-private-key-file=/etc/kubernetes/ssl/server.key \
---tls-cert-file=/etc/kubernetes/ssl/server.crt"'>/etc/kubernetes/apiserver.conf
-[root@gysl-m ~]# echo \
-'[Unit]
-Description=Kubernetes API Server
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=etcd.service
-Wants=etcd.service
-
-[Service]
-Type=simple
-WorkingDirectory=/var/lib/kubernetes/kube-apiserver/
-EnvironmentFile=/etc/kubernetes/apiserver.conf
-ExecStart=/usr/local/bin/kube-apiserver  $KUBE_API_ARGS
-Restart=on-failure
-LimitNOFIFE=65536
-
-[Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-apiserver.service
-[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-apiserver/
-[root@gysl-m ~]# mkdir -p /var/log/kubernetes/apiserver
-[root@gysl-m ~]# systemctl daemon-reload
-[root@gysl-m ~]# systemctl start kube-apiserver
-[root@gysl-m ~]# systemctl enable kube-apiserver
-Created symlink from /etc/systemd/system/multi-user.target.wants/kube-apiserver.service to /usr/lib/systemd/system/kube-apiserver.service.
-[root@gysl-m ~]# systemctl status kube-apiserver
-● kube-apiserver.service - Kubernetes API Server
-   Loaded: loaded (/usr/lib/systemd/system/kube-apiserver.service; enabled; vendor preset: disabled)
-   Active: active (running)
-```
-
-至此，kube-apiser部署成功。一些启动参数如下：
-
-- etcd_servers: 指定etcd服务的URL。
-- insecure-bind-address： apiserver绑定主机的非安全端口，设置0.0.0.0表示绑定所有IP地址
-- insecure-port: apiserver绑定主机的非安全端口号，默认为8080。
-- service-cluster-ip-range: Kubernetes集群中service的虚拟IP地址范围，以CIDR表示，该IP范围不能与物理机的真实IP段有重合。
-- service-node-port-range: kubernetes集群中Service可映射的物理机端口号范围，默认为30000–32767。
-- admission_control: kubernetes集群的准入控制设置，各控制模块以插件的形式依次生效。
-- logtostderr: 设置为false表示将日志写入文件，不写入stderr。
-- log-dir: 日志目录。
-- v: 日志级别。
-  
-#### 3.5.4 准备kubeconfig文件
-
-文件内容如下：
-
-```yaml
-apiVersion: v1
-kind: Config
-users:
-- name: gysl
-  user:
-    client-certificate: /etc/kubernetes/ssl/client.crt
-    client-key: /etc/kubernetes/ssl/client.key
-clusters:
-- name: gysl-cluster
-  cluster:
-    certificate-authority: /etc/kubernetes/ssl/ca.pem
-contexts:
-- context:
-    cluster: gysl-cluster
-    user: gysl
-  name: gysl-context
-current-context: gysl-context
-```
-
-```bash
-[root@gysl-m ~]# echo \
-'apiVersion: v1
-kind: Config
-users:
-- name: gysl
-  user:
-    client-certificate: /etc/kubernetes/ssl/client.crt
-    client-key: /etc/kubernetes/ssl/client.key
-clusters:
-- name: gysl-cluster
-  cluster:
-    certificate-authority: /etc/kubernetes/ssl/ca.pem
-contexts:
-- context:
-    cluster: gysl-cluster
-    user: gysl
-  name: gysl-context
-current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
-```
-
-#### 3.5.5 安装配置kube-controller-manager服务
-
-```bash
-[root@gysl-m ~]# mv kubernetes/server/bin/kube-controller-manager /usr/local/bin/
-[root@gysl-m ~]# echo \
-'KUBE_CONTROLLER_MANAGER_ARGS=" \
---master=https://172.31.3.11:6443 \
---service-account-private-key-file=/etc/kubernetes/ssl/server.key \
---root-ca-file=/etc/kubernetes/ssl/ca.pem \
---kubeconfig=/etc/kubernetes/kubeconfig.yaml \
---logtostderr=false \
---log-dir=/var/log/kubernetes/controller-manager \
---v=2"'>/etc/kubernetes/controller-manager.conf
-[root@gysl-m ~]# mkdir -p /var/log/kubernetes/controller-manager
-[root@gysl-m ~]# echo \
-'[Unit]
-Description=Kubernetes Controller Manager
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=kube-apiserver.service
-Requires=kube-apiserver.service
-
-[Service]
-WorkingDirectory=/var/lib/kubernetes/kube-controller-manager/
-EnvironmentFile=/etc/kubernetes/controller-manager.conf
-ExecStart=/usr/local/bin/kube-controller-manager $KUBE_CONTROLLER_MANAGER_ARGS
-Restart=on-failure
-LimitNOFIFE=65536
-
-[Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-controller-manager.service
-[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-controller-manager
-[root@gysl-m ~]# systemctl daemon-reload
-[root@gysl-m ~]# systemctl start kube-controller-manager
-[root@gysl-m ~]# systemctl enable kube-controller-manager
-Created symlink from /etc/systemd/system/multi-user.target.wants/kube-controller-manager.service to /usr/lib/systemd/system/kube-controller-manager.service.
-[root@gysl-m ~]# systemctl status kube-controller-manager
-● kube-controller-manager.service - Kubernetes Controller Manager
-   Loaded: loaded (/usr/lib/systemd/system/kube-controller-manager.service; enabled; vendor preset: disabled)
-   Active: active (running) 
-```
-
-kube-controller-manager服务安装配置成功！
-
-#### 3.5.6 安装配置kube-scheduler服务
-
-```bash
-[root@gysl-m ~]# echo \
-'KUBE_SCHEDULER_ARGS="\
---master=https://172.31.3.11:6443 \
---kubeconfig=/etc/kubernetes/kubeconfig.yaml \
---logtostderr=false \
---log-dir=/var/log/kubernetes/scheduler \
---v=2"'>/etc/kubernetes/scheduler.conf
-[root@gysl-m ~]# mkdir /var/log/kubernetes/scheduler
-[root@gysl-m ~]# echo \
-'[Unit]
-Description=Kubernetes Scheduler
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=kube-apiserver.service
-Wants=kube-apiserver.service
-
-[Service]
-WorkingDirectory=/var/lib/kubernetes/kube-scheduler/
-EnvironmentFile=/etc/kubernetes/scheduler.conf
-ExecStart=/usr/local/bin/kube-scheduler $KUBE_SCHEDULER_ARGS
-LimitNOFIFE=65536
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-scheduler.service
-[root@gysl-m ~]# mkdir -p /var/lib/kubernetes/kube-scheduler/
-[root@gysl-m ~]# systemctl daemon-reload
-[root@gysl-m ~]# systemctl start kube-scheduler
-[root@gysl-m ~]# systemctl enable kube-scheduler
-Created symlink from /etc/systemd/system/multi-user.target.wants/kube-scheduler.service to /usr/lib/systemd/system/kube-scheduler.service.
-[root@gysl-m ~]# systemctl status kube-scheduler
-● kube-scheduler.service - Kubernetes Scheduler
-   Loaded: loaded (/usr/lib/systemd/system/kube-scheduler.service; enabled; vendor preset: disabled)
-   Active: active (running) 
-```
-
-kube-scheduler服务安装配置成功。
-
-### 3.6 部署Node节点
+### 3.7 部署Node节点
 
 #### 3.6.1 准备CA证书
 
