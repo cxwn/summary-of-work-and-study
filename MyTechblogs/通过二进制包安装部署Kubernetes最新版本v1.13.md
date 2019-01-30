@@ -381,11 +381,372 @@ etcdctl \
 
 ### 3.5 部署Flannel网络
 
-由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。
+由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。在每一个节点都需要进行配置，执行脚本KubernetesInstall-08.sh。脚本内容如下：
 
-### 3.5 部署Master节点
+```bash
+#!/bin/bash
+KUBE_CONF=/etc/kubernetes
+FLANNEL_CONF=$KUBE_CONF/flannel.conf
+mkdir $KUBE_CONF
+tar -xvzf flannel-v0.11.0-linux-amd64.tar.gz
+mv {flanneld,mk-docker-opts.sh} /usr/local/bin/
+# Check whether etcd cluster is healthy.
+etcdctl \
+--ca-file=/etc/etcd/ssl/ca.pem \
+--cert-file=/etc/etcd/ssl/server.pem \
+--key-file=/etc/etcd/ssl/server-key.pem \
+--endpoints="https://172.31.2.11:2379,\
+https://172.31.2.12:2379,\
+https://172.31.2.13:2379" cluster-health
 
-#### 3.5.1 创建CA证书
+# Writing into a predetermined subnetwork.
+cd /etc/etcd/ssl
+etcdctl \
+--ca-file=ca.pem --cert-file=server.pem --key-file=server-key.pem \
+--endpoints="https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379" \
+set /coreos.com/network/config  '{ "Network": "172.17.0.0/16", "Backend": {"Type": "vxlan"}}'
+cd ~
+
+# Configuration the flannel service.
+cat>$FLANNEL_CONF<<EOF
+FLANNEL_OPTIONS="--etcd-endpoints=https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379 -etcd-cafile=/etc/etcd/ssl/ca.pem -etcd-certfile=/etc/etcd/ssl/server.pem -etcd-keyfile=/etc/etcd/ssl/server-key.pem" 
+EOF
+cat>/usr/lib/systemd/system/flanneld.service<<EOF
+[Unit]
+Description=Flanneld overlay address etcd agent
+After=network-online.target network.target
+Before=docker.service
+
+[Service]
+Type=notify
+EnvironmentFile=$FLANNEL_CONF
+ExecStart=/usr/local/bin/flanneld --ip-masq $FLANNEL_OPTIONS
+ExecStartPost=/usr/local/bin/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d /run/flannel/subnet.env
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Modify the docker service.
+sed -i.bak -e '/ExecStart/i EnvironmentFile=\/run\/flannel\/subnet.env' -e 's/ExecStart=\/usr\/bin\/dockerd/ExecStart=\/usr\/bin\/dockerd $DOCKER_NETWORK_OPTIONS/g' /usr/lib/systemd/system/docker.service
+
+# Start or restart related services.
+systemctl daemon-reload
+systemctl enable flanneld --now
+systemctl restart docker
+systemctl status flanneld
+systemctl status docker
+ip address show
+```
+
+在脚本执行之前需要把flannel安装包拷贝到用户的HOME目录。脚本执行完毕之后需要检查各服务的状态，确保docker0和flannel.1在同一网段。
+
+### 3.6 部署Master节点
+
+#### 3.6.1 创建CA证书
+
+这一步中创建了kube-apiserver和kube-proxy相关的CA证书，在Master节点执行脚本：
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-09.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy the master node.
+KUBE_SSL=/etc/kubernetes/ssl
+mkdir $KUBE_SSL
+
+# Create CA.
+cat>$KUBE_SSL/ca-config.json<<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "87600h"
+    },
+    "profiles": {
+      "kubernetes": {
+         "expiry": "87600h",
+         "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+        ]
+      }
+    }
+  }
+}
+EOF
+cat>$KUBE_SSL/ca-csr.json<<EOF
+{
+    "CN": "kubernetes",
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "L": "Beijing",
+            "ST": "Beijing",
+            "O": "k8s",
+            "OU": "System"
+        }
+    ]
+}
+EOF
+cat>$KUBE_SSL/server-csr.json<<EOF
+{
+    "CN": "kubernetes",
+    "hosts": [
+      "10.0.0.1",
+      "127.0.0.1",
+      "172.31.2.11",
+      "kubernetes",
+      "kubernetes.default",
+      "kubernetes.default.svc",
+      "kubernetes.default.svc.cluster",
+      "kubernetes.default.svc.cluster.local"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "L": "Beijing",
+            "ST": "Beijing",
+            "O": "k8s",
+            "OU": "System"
+        }
+    ]
+}
+EOF
+cd $KUBE_SSL
+cfssl_linux-amd64 gencert -initca ca-csr.json | cfssljson_linux-amd64 -bare ca -
+cfssl_linux-amd64 gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes server-csr.json | cfssljson_linux-amd64 -bare server
+
+# Create kube-proxy CA.
+cat>$KUBE_SSL/kube-proxy-csr.json<<EOF
+{
+  "CN": "system:kube-proxy",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "L": "BeiJing",
+      "ST": "BeiJing",
+      "O": "k8s",
+      "OU": "System"
+    }
+  ]
+}
+EOF
+cfssl_linux-amd64 gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-proxy-csr.json | cfssljson_linux-amd64 -bare kube-proxy
+ls *.pem
+cd ~
+```
+
+执行完毕之后应该看到以下文件：
+/etc/kubernetes/ssl/ca-key.pem  /etc/kubernetes/ssl/kube-proxy-key.pem  /etc/kubernetes/ssl/server-key.pem
+/etc/kubernetes/ssl/ca.pem      /etc/kubernetes/ssl/kube-proxy.pem      /etc/kubernetes/ssl/server.pem
+
+#### 3.6.2 安装配置kube-apiserver服务
+
+将备好的安装包解压，并移动到相关目录，进行相关配置，执行脚本KubernetesInstall-10.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-10.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+KUBE_ETC=/etc/kubernetes
+KUBE_API_CONF=/etc/kubernetes/apiserver.conf
+tar -xvzf kubernetes-server-linux-amd64.tar.gz
+mv kubernetes/server/bin/{kube-apiserver,kube-scheduler,kube-controller-manager} /usr/local/bin/
+
+# Create a token file.
+cat>$KUBE_ETC/token.csv<<EOF
+$(head -c 16 /dev/urandom | od -An -t x | tr -d ' '),kubelet-bootstrap,10001,"system:kubelet-bootstrap"
+EOF
+
+# Create a kube-apiserver configuration file.
+cat >$KUBE_API_CONF<<EOF
+KUBE_APISERVER_OPTS="--logtostderr=true \
+--v=4 \
+--etcd-servers=https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379 \
+--bind-address=172.31.2.11 \
+--secure-port=6443 \
+--advertise-address=172.31.2.11 \
+--allow-privileged=true \
+--service-cluster-ip-range=10.0.0.0/24 \
+--enable-admission-plugins=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota,NodeRestriction \
+--authorization-mode=RBAC,Node \
+--enable-bootstrap-token-auth \
+--token-auth-file=$KUBE_ETC/token.csv \
+--service-node-port-range=30000-50000 \
+--tls-cert-file=$KUBE_ETC/ssl/server.pem  \
+--tls-private-key-file=$KUBE_ETC/ssl/server-key.pem \
+--client-ca-file=$KUBE_ETC/ssl/ca.pem \
+--service-account-key-file=$KUBE_ETC/ssl/ca-key.pem \
+--etcd-cafile=/etc/etcd/ssl/ca.pem \
+--etcd-certfile=/etc/etcd/ssl/server.pem \
+--etcd-keyfile=/etc/etcd/ssl/server-key.pem"
+EOF
+
+# Create the kube-apiserver service.
+cat>/usr/lib/systemd/system/kube-apiserver.service<<EOF
+[Unit]
+Description=Kubernetes API Server
+Documentation=https://github.com/kubernetes/kubernetes
+After=etcd.service
+Wants=etcd.service
+
+[Service]
+EnvironmentFile=-$KUBE_API_CONF
+ExecStart=/usr/local/bin/kube-apiserver \$KUBE_APISERVER_OPTS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable kube-apiserver.service --now
+systemctl status kube-apiserver.service
+```
+
+#### 3.6.3 安装配置kube-scheduler服务
+
+之前已经将kube-scheduler相关的二进制文件移动到了相关目录，直接执行脚本KubernetesInstall-11.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-11.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy the scheduler service.
+KUBE_ETC=/etc/kubernetes
+KUBE_SCHEDULER_CONF=$KUBE_ETC/kube-scheduler.conf
+cat>$KUBE_SCHEDULER_CONF<<EOF
+KUBE_SCHEDULER_OPTS="--logtostderr=true \
+--v=4 \
+--master=127.0.0.1:8080 \
+--leader-elect"
+EOF
+
+cat>/usr/lib/systemd/system/kube-scheduler.service<<EOF
+[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+EnvironmentFile=-$KUBE_SCHEDULER_CONF
+ExecStart=/usr/local/bin/kube-scheduler \$KUBE_SCHEDULER_OPTS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable kube-scheduler.service --now
+sleep 20
+systemctl status kube-scheduler.service
+```
+
+#### 3.6.4 安装配置kube-controller服务
+
+之前已经将kube-scheduler相关的二进制文件移动到了相关目录，直接执行脚本KubernetesInstall-12.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-12.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Deploy the controller-manager service.
+KUBE_CONTROLLER_CONF=/etc/kubernetes/kube-controller-manager.conf
+
+cat>$KUBE_CONTROLLER_CONF<<EOF 
+KUBE_CONTROLLER_MANAGER_OPTS="--logtostderr=true \
+--v=4 \
+--master=127.0.0.1:8080 \
+--leader-elect=true \
+--address=127.0.0.1 \
+--service-cluster-ip-range=10.0.0.0/24 \
+--cluster-name=kubernetes \
+--cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem \
+--cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem  \
+--root-ca-file=/etc/kubernetes/ssl/ca.pem \
+--service-account-private-key-file=/etc/kubernetes/ssl/ca-key.pem"
+EOF
+
+cat>/usr/lib/systemd/system/kube-controller-manager.service<<EOF 
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+EnvironmentFile=-$KUBE_CONTROLLER_CONF
+ExecStart=/usr/local/bin/kube-controller-manager \$KUBE_CONTROLLER_MANAGER_OPTS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable kube-controller-manager.service --now
+sleep 20
+systemctl status kube-controller-manager.service
+```
+
+#### 3.6.5 查看集群状态
+
+直接执行脚本KubernetesInstall-12.sh。
+
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-12.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+# Check the service.
+mv kubernetes/server/bin/kubectl /usr/local/bin/
+kubectl get cs
+```
+
+如果部署成功的话，我们将看到如下结果：
+
+```bash
+[root@gysl-master ~]# kubectl get cs
+NAME                 STATUS    MESSAGE             ERROR
+controller-manager   Healthy   ok
+scheduler            Healthy   ok
+etcd-2               Healthy   {"health":"true"}
+etcd-0               Healthy   {"health":"true"}
+etcd-1               Healthy   {"health":"true"}
+```
 
 ```bash
 [root@gysl-m ~]# mkdir -p /etc/kubernetes/ssl
