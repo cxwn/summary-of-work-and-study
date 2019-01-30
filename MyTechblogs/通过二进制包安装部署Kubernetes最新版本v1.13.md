@@ -415,7 +415,7 @@ cd ~
 
 # Configuration the flannel service.
 cat>$FLANNEL_CONF<<EOF
-FLANNEL_OPTIONS="--etcd-endpoints=https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379 -etcd-cafile=/etc/etcd/ssl/ca.pem -etcd-certfile=/etc/etcd/ssl/server.pem -etcd-keyfile=/etc/etcd/ssl/server-key.pem" 
+FLANNEL_OPTIONS="--etcd-endpoints=https://172.31.2.11:2379,https://172.31.2.12:2379,https://172.31.2.13:2379 -etcd-cafile=/etc/etcd/ssl/ca.pem -etcd-certfile=/etc/etcd/ssl/server.pem -etcd-keyfile=/etc/etcd/ssl/server-key.pem"
 EOF
 cat>/usr/lib/systemd/system/flanneld.service<<EOF
 [Unit]
@@ -691,7 +691,7 @@ systemctl status kube-scheduler.service
 # Deploy the controller-manager service.
 KUBE_CONTROLLER_CONF=/etc/kubernetes/kube-controller-manager.conf
 
-cat>$KUBE_CONTROLLER_CONF<<EOF 
+cat>$KUBE_CONTROLLER_CONF<<EOF
 KUBE_CONTROLLER_MANAGER_OPTS="--logtostderr=true \
 --v=4 \
 --master=127.0.0.1:8080 \
@@ -705,7 +705,7 @@ KUBE_CONTROLLER_MANAGER_OPTS="--logtostderr=true \
 --service-account-private-key-file=/etc/kubernetes/ssl/ca-key.pem"
 EOF
 
-cat>/usr/lib/systemd/system/kube-controller-manager.service<<EOF 
+cat>/usr/lib/systemd/system/kube-controller-manager.service<<EOF
 [Unit]
 Description=Kubernetes Controller Manager
 Documentation=https://github.com/kubernetes/kubernetes
@@ -742,7 +742,7 @@ mv kubernetes/server/bin/kubectl /usr/local/bin/
 kubectl get cs
 ```
 
-如果部署成功的话，我们将看到如下结果：
+如果部署成功的话，将看到如下结果：
 
 ```bash
 [root@gysl-master ~]# kubectl get cs
@@ -756,153 +756,189 @@ etcd-1               Healthy   {"health":"true"}
 
 ### 3.7 部署Node节点
 
-#### 3.6.1 准备CA证书
+#### 3.7.1 创建bootstrap和kube-proxy的kubeconfig文件
+
+在前面创建的token文件在这一步派上了用场，在Master节点上执行脚本KubernetesInstall-14.sh创建bootstrap.kubeconfig和kube-proxy.kubeconfig。
 
 ```bash
-[root@gysl-n1 ~]# mkdir -p /etc/kubernetes/ssl && cd /etc/kubernetes/ssl
-[root@gysl-n1 ssl]# scp root@gysl-m:/etc/kubernetes/ssl/ca.{pem,key} .
-root@gysl-m's password:
-ca.pem                                                                                                                                       100% 1099   193.6KB/s   00:00
-root@gysl-m's password:
-ca.key                                                                                                                                       100% 1679   339.1KB/s   00:00
-[root@gysl-n1 ssl]# ls
-ca.key  ca.pem
-[root@gysl-n1 ssl]# openssl genrsa -out client.key 2048
-Generating RSA private key, 2048 bit long modulus
-........................................................................+++
-...................................................................................+++
-e is 65537 (0x10001)
-[root@gysl-n1 ssl]# openssl req -new -key client.key -subj "/CN=172.31.3.12" -out client.csr
-[root@gysl-n1 ssl]# openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out client.crt -days 5000
-Signature ok
-subject=/CN=172.31.3.12
-Getting CA Private Key
+[root@gysl-master ~]# sh KubernetesInstall-14.sh
 ```
 
-#### 3.6.2 准备kubeconfig文件
-
-文件内容如下：
-
-```yaml
-apiVersion: v1
-kind: Config
-users:
-- name: gysl
-  user:
-    client-certificate: /etc/kubernetes/ssl/client.crt
-    client-key: /etc/kubernetes/ssl/client.key
-clusters:
-- name: gysl-cluster
-  cluster:
-    certificate-authority: /etc/kubernetes/ssl/ca.crt
-    server: https://172.31.3.11:6443
-contexts:
-- context:
-    cluster: gysl-cluster
-    user: gysl
-  name: gysl-context
-current-context: gysl-context
-```
+脚本内容如下：
 
 ```bash
-[root@gysl-n1 ssl]# echo \
-'apiVersion: v1
-kind: Config
-users:
-- name: gysl
-  user:
-    client-certificate: /etc/kubernetes/ssl/client.crt
-    client-key: /etc/kubernetes/ssl/client.key
-clusters:
-- name: gysl-cluster
-  cluster:
-    certificate-authority: /etc/kubernetes/ssl/ca.crt
-    server: https://172.31.3.11:6443
-contexts:
-- context:
-    cluster: gysl-cluster
-    user: gysl
-  name: gysl-context
-current-context: gysl-context'>/etc/kubernetes/kubeconfig.yaml
+#!/bin/bash
+BOOTSTRAP_TOKEN=$(awk -F "," '{print $1}' /etc/kubernetes/token.csv)
+KUBE_SSL=/etc/kubernetes/ssl/
+KUBE_APISERVER="https://172.31.2.11:6443"
+
+cd $KUBE_SSL
+# Set cluster parameters.
+kubectl config set-cluster kubernetes \
+  --certificate-authority=./ca.pem \
+  --embed-certs=true \
+  --server=${KUBE_APISERVER} \
+  --kubeconfig=bootstrap.kubeconfig
+
+# Set client parameters.
+kubectl config set-credentials kubelet-bootstrap \
+  --token=${BOOTSTRAP_TOKEN} \
+  --kubeconfig=bootstrap.kubeconfig
+
+# Set context parameters. 
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=kubelet-bootstrap \
+  --kubeconfig=bootstrap.kubeconfig
+
+# Set context.
+kubectl config use-context default --kubeconfig=bootstrap.kubeconfig
+
+# Create kube-proxy kubeconfig file. 
+kubectl config set-cluster kubernetes \
+  --certificate-authority=./ca.pem \
+  --embed-certs=true \
+  --server=${KUBE_APISERVER} \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config set-credentials kube-proxy \
+  --client-certificate=./kube-proxy.pem \
+  --client-key=./kube-proxy-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=kube-proxy \
+  --kubeconfig=kube-proxy.kubeconfig
+
+kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
+cd ~
+
+# Bind kubelet-bootstrap user to system cluster roles.
+kubectl create clusterrolebinding kubelet-bootstrap \
+  --clusterrole=system:node-bootstrapper \
+  --user=kubelet-bootstrap
 ```
 
-#### 3.6.3 安装配置kube-kubelet服务
+#### 3.7.2 配置kube-proxy和kubelet服务
+
+因为kubernetes-server-linux-amd64.tar.gz已经在Master节点的HOME目录解压，所以可以在各节点上执行脚本KubernetesInstall-15.sh。
 
 ```bash
-[root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kubelet /usr/local/bin/
-kubelet                                                                                                                                      100%  108MB  73.4MB/s   00:01
-[root@gysl-n1 ~]# echo \
-'KUBELET_ARGS=" \
---hostname-override=172.31.3.12 \
---logtostderr=false \
---log-dir=/var/log/kubernetes/kubelet \
---v=2 \
---kubeconfig=/etc/kubernetes/kubeconfig.yaml \
---cgroup-driver=systemd \
---pod-infra-container-image=172.31.3.11:443/k8s/pause-amd64:3.0"'>/etc/kubernetes/kubelet.conf
-[root@gysl-n1 ~]# mkdir -p /var/log/kubernetes/kubelet
-[root@gysl-n1 ~]# echo \
-'[Unit]
-Description=Kubelet Server
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+[root@gysl-node1 ~]# sh KubernetesInstall-15.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+KUBE_CONF=/etc/kubernetes
+KUBE_SSL=$KUBE_CONF/ssl
+IP=172.31.2.13
+mkdir $KUBE_SSL
+scp gysl-master:~/kubernetes/server/bin/{kube-proxy,kubelet} /usr/local/bin/
+scp gysl-master:$KUBE_CONF/ssl/{bootstrap.kubeconfig,kube-proxy.kubeconfig} $KUBE_CONF
+cat>$KUBE_CONF/kube-proxy.conf<<EOF
+KUBE_PROXY_OPTS="--logtostderr=true \
+--v=4 \
+--hostname-override=$IP \
+--cluster-cidr=10.0.0.0/24 \
+--kubeconfig=$KUBE_CONF/kube-proxy.kubeconfig"
+EOF
+cat>/usr/lib/systemd/system/kube-proxy.service<<EOF
+[Unit]
+Description=Kubernetes Proxy
+After=network.target
+
+[Service]
+EnvironmentFile=-$KUBE_CONF/kube-proxy.conf
+ExecStart=/usr/local/bin/kube-proxy \$KUBE_PROXY_OPTS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable kube-proxy.service --now
+sleep 20
+systemctl status kube-proxy.service -l
+cat>$KUBE_CONF/kubelet.yaml<<EOF
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: $IP
+port: 10250
+readOnlyPort: 10255
+cgroupDriver: cgroupfs
+clusterDNS: ["10.0.0.2"]
+clusterDomain: cluster.local.
+failSwapOn: false
+authentication:
+  anonymous:
+    enabled: true
+EOF
+cat>$KUBE_CONF/kubelet.conf<<EOF
+KUBELET_OPTS="--logtostderr=true \
+--v=4 \
+--hostname-override=$IP \
+--kubeconfig=$KUBE_CONF/kubelet.kubeconfig \
+--bootstrap-kubeconfig=$KUBE_CONF/bootstrap.kubeconfig \
+--config=$KUBE_CONF/kubelet.yaml \
+--cert-dir=$KUBE_SSL \
+--pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google-containers/pause-amd64:3.0"
+EOF
+cat>/usr/lib/systemd/system/kubelet.service<<EOF
+[Unit]
+Description=Kubernetes Kubelet
 After=docker.service
 Requires=docker.service
 
 [Service]
-WorkingDirectory=/var/lib/kubernetes/kubelet
-EnvironmentFile=/etc/kubernetes/kubelet.conf
-ExecStart=/usr/local/bin/kubelet $KUBELET_ARGS
+EnvironmentFile=$KUBE_CONF/kubelet.conf
+ExecStart=/usr/local/bin/kubelet \$KUBELET_OPTS
 Restart=on-failure
+KillMode=process
 
 [Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-kubelet.service
-[root@gysl-n1 ~]# mkdir -p /var/lib/kubernetes/kubelet
-[root@gysl-n1 ~]# systemctl daemon-reload
-[root@gysl-n1 ~]# systemctl start kube-kubelet
-[root@gysl-n1 ~]# systemctl enable kube-kubelet
-Created symlink from /etc/systemd/system/multi-user.target.wants/kube-kubelet.service to /usr/lib/systemd/system/kube-kubelet.service.
-[root@gysl-n1 ~]# systemctl status kube-kubelet
-● kube-kubelet.service - Kubelet Server
-   Loaded: loaded (/usr/lib/systemd/system/kube-kubelet.service; enabled; vendor preset: disabled)
-   Active: active (running)
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable kubelet.service --now
+sleep 20
+systemctl status kubelet.service -l
 ```
 
-kube-kubelet服务安装配置成功！
-#### 3.6.4 安装配置kube-proxy服务
+以上脚本有多少个Node节点就在相应的Node节点上执行多少次，每次执行只需修改IP的值即可。
+
+#### 3.7.3 Approve kubelet CSR请求
+
+可以手动或自动approve CSR请求。推荐使用自动的方式，因为从 v1.8 版本开始，可以自动轮转approve csr后生成的证书。未approve之前如下：
 
 ```bash
-[root@gysl-n1 ~]# scp root@172.31.3.11:~/kubernetes/server/bin/kube-proxy /usr/local/bin/
-kube-proxy            100%   33MB  42.4MB/s   00:00
-[root@gysl-n1 ~]# echo \
-'KUBE_PROXY_ARGS=" \
---logtostderr=false \
---log-dir=/var/log/kubernetes/kube-proxy \
---v=2 \
---kubeconfig=/etc/kubernetes/kubeconfig.yaml"'>/etc/kubernetes/kube-proxy.conf
-[root@gysl-n1 ~]# mkdir -p /var/log/kubernetes/kube-proxy
-[root@gysl-n1 ~]# echo \
-'[Unit]
-Description=Kube-Proxy Server
-Documentation=https://github.com/GoogleCloudPlatform/kubernetes
-After=network.target
-Requires=network.target
+[root@gysl-master ~]# kubectl get csr
+NAME                                                   AGE   REQUESTOR           CONDITION
+node-csr-FpTP2sCI0SiYDCxaIHa1SRukS_5u9BQN10BsTd6RU1Y   20m   kubelet-bootstrap   Pending
+node-csr-YYfnPwAws2LxJzV-OgYjJ22zy_z9XQM8PT0MnqZN910   24m   kubelet-bootstrap   Pending
+```
 
-[Service]
-WorkingDirectory=/var/lib/kubernetes/kube-proxy
-EnvironmentFile=/etc/kubernetes/proxy.conf
-ExecStart=/usr/local/bin/kube-proxy $KUBE_PROXY_ARGS
-Restart=on-failure
-LimitNOFILE=65536
+在Master节点上执行脚本KubernetesInstall-15.sh。
 
-[Install]
-WantedBy=multi-user.target'>/usr/lib/systemd/system/kube-proxy.service
-[root@gysl-n1 ~]# mkdir -p /var/lib/kubernetes/kube-proxy
-[root@gysl-n1 ~]# systemctl daemon-reload
-[root@gysl-n1 ~]# systemctl start kube-proxy
-[root@gysl-n1 ~]# systemctl enable kube-proxy
-Created symlink from /etc/systemd/system/multi-user.target.wants/kube-proxy.service to /usr/lib/systemd/system/kube-proxy.service.
-[root@gysl-n1 ~]# systemctl status kube-proxy
+```bash
+[root@gysl-master ~]# sh KubernetesInstall-15.sh
+certificatesigningrequest.certificates.k8s.io/node-csr-FpTP2sCI0SiYDCxaIHa1SRukS_5u9BQN10BsTd6RU1Y approved
+certificatesigningrequest.certificates.k8s.io/node-csr-YYfnPwAws2LxJzV-OgYjJ22zy_z9XQM8PT0MnqZN910 approved
+```
 
+脚本内容如下：
+
+```bash
+#!/bin/bash
+CSRS=$(kubectl get csr | awk '{if(NR>1) print $1}')
+for csr in $CSRS;
+    do
+        kubectl certificate approve $csr;
+    done
 ```
 
 ### 3.7 导入相关镜像
