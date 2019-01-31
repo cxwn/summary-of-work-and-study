@@ -1294,3 +1294,5 @@ NAME          STATUS   ROLES    AGE   VERSION
 5.4 [Systemd相关资料](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
 
 5.5 [Kubernetes基本概念](https://kubernetes.io/zh/docs/concepts/)
+
+5.6 [本文涉及到的脚本及配置文件](https://github.com/mrivandu/Kubernetes-DevOps/tree/master/KubernetesInstall)
