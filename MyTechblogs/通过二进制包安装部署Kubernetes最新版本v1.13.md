@@ -80,9 +80,9 @@ v0.11.0
 
 ### 2.2 服务器规划
 
-|:-:|:-:|:-:|:-:|
 |IP|主机名（Hostname）|角色（Role）|组件（Component）|
-|172.31.2.11|gysl-master|Master&&Node|kube-apiserver，kube-controller-manager，kube-scheduler，etcd，kubelet，kube-proxy|
+|:-:|:-:|:-:|:-:|
+|172.31.2.11|gysl-master|Master&&Node|kube-apiserver，kube-controller-manager，kube-scheduler，etcd，kubelet，kube-proxy，docker，flannel|
 |172.31.2.12|gysl-node1|Node|kubelet，kube-proxy，docker，flannel，etcd|
 |172.31.2.13|gysl-node2|Node|kubelet，kube-proxy，docker，flannel，etcd|
 
