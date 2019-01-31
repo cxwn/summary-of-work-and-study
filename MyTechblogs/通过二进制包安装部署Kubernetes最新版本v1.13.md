@@ -85,7 +85,7 @@ v0.11.0
 |172.31.2.11|gysl-master|Master&Node|**kube-apiserver**，**kube-controller-manager**，**kube-scheduler**，*etcd*，（kubectl），kubelet，kube-proxy，docker，flannel|
 |172.31.2.12|gysl-node1|Node|kubelet，kube-proxy，docker，flannel，etcd|
 |172.31.2.13|gysl-node2|Node|kubelet，kube-proxy，docker，flannel，etcd|
-注：加粗部分是Master节点必须安装的组件，etcd可以部署在其他节点，也可以部署在Master节点，kubectl是管理kubernetes的命令行工具。其余部分是Node节点必备组件。
+注：加粗部分是Master节点必须安装的组件，etcd可以部署在其他节点，也可以部署在Master节点，kubectl是管理kubernetes的命令行工具。其余部分是Node节点必选组件。
 
 ## 三 操作步骤
 
