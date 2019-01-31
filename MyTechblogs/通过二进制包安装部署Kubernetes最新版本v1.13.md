@@ -82,7 +82,7 @@ v0.11.0
 
 |IP|主机名（Hostname）|角色（Role）|组件（Component）|
 |:-:|:-:|:-:|:-:|
-|172.31.2.11|gysl-master|Master&Node|**kube-apiserver**，**kube-controller-manager**，**kube-scheduler**，etcd，kubelet，kube-proxy，docker，flannel|
+|172.31.2.11|gysl-master|Master&Node|**kube-apiserver**，**kube-controller-manager**，**kube-scheduler**，etcd，kubelet，kube-proxy，docker，flannel，（kubectl）|
 |172.31.2.12|gysl-node1|Node|kubelet，kube-proxy，docker，flannel，etcd|
 |172.31.2.13|gysl-node2|Node|kubelet，kube-proxy，docker，flannel，etcd|
 
@@ -1090,6 +1090,110 @@ Commercial support is available at
 <p><em>Thank you for using nginx.</em></p>
 </body>
 </html>
+```
+
+### 3.9 在Master节点部署Node节点的相关组件
+
+资源比较充裕的情况下，Master节点仅仅做为服务接口、调度、控制节点，必须部署的组件有：kube-apiserver、kube-controller-manager、kube-scheduler、kubectl、etcd。除此之外，一般还需要做HA等相关部署。如果Master节点资源比较充裕，那么我们也可以将Master节点部署设置为一般节点来使用。为此，直接执行脚本KubernetesInstall-17.sh。
+
+```bash
+[root@gysl-master ~]# KubernetesInstall-17.sh
+```
+
+脚本内容如下：
+
+```bash
+#!/bin/bash
+KUBE_CONF=/etc/kubernetes
+KUBE_SSL=$KUBE_CONF/ssl
+IP=172.31.2.11
+mkdir $KUBE_SSL
+cp ~/kubernetes/server/bin/{kube-proxy,kubelet} /usr/local/bin/
+cp $KUBE_CONF/ssl/{bootstrap.kubeconfig,kube-proxy.kubeconfig} $KUBE_CONF
+cat>$KUBE_CONF/kube-proxy.conf<<EOF
+KUBE_PROXY_OPTS="--logtostderr=true \
+--v=4 \
+--hostname-override=$IP \
+--cluster-cidr=10.0.0.0/24 \
+--kubeconfig=$KUBE_CONF/kube-proxy.kubeconfig"
+EOF
+cat>/usr/lib/systemd/system/kube-proxy.service<<EOF
+[Unit]
+Description=Kubernetes Proxy
+After=network.target
+
+[Service]
+EnvironmentFile=-$KUBE_CONF/kube-proxy.conf
+ExecStart=/usr/local/bin/kube-proxy \$KUBE_PROXY_OPTS
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable kube-proxy.service --now
+sleep 20
+systemctl status kube-proxy.service -l
+cat>$KUBE_CONF/kubelet.yaml<<EOF
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: $IP
+port: 10250
+readOnlyPort: 10255
+cgroupDriver: cgroupfs
+clusterDNS: ["10.0.0.2"]
+clusterDomain: cluster.local.
+failSwapOn: false
+authentication:
+  anonymous:
+    enabled: true
+EOF
+cat>$KUBE_CONF/kubelet.conf<<EOF
+KUBELET_OPTS="--logtostderr=true \
+--v=4 \
+--hostname-override=$IP \
+--kubeconfig=$KUBE_CONF/kubelet.kubeconfig \
+--bootstrap-kubeconfig=$KUBE_CONF/bootstrap.kubeconfig \
+--config=$KUBE_CONF/kubelet.yaml \
+--cert-dir=$KUBE_SSL \
+--pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google-containers/pause-amd64:3.0"
+EOF
+cat>/usr/lib/systemd/system/kubelet.service<<EOF
+[Unit]
+Description=Kubernetes Kubelet
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=$KUBE_CONF/kubelet.conf
+ExecStart=/usr/local/bin/kubelet \$KUBELET_OPTS
+Restart=on-failure
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable kubelet.service --now
+sleep 20
+systemctl status kubelet.service -l
+
+kubectl certificate approve $(kubectl get csr | awk '{if(NR>1) print $1}')
+kubectl get csr
+kubectl label node 172.31.2.11  node-role.kubernetes.io/master='master'
+kubectl label node 172.31.2.12  node-role.kubernetes.io/node='node'
+kubectl label node 172.31.2.13  node-role.kubernetes.io/node='node'
+kubectl get nodes
+```
+
+部署成功之后，将出现以下内容：
+
+```text
+NAME          STATUS   ROLES    AGE   VERSION
+172.31.2.11   Ready    master   22m   v1.13.2
+172.31.2.12   Ready    node     11h   v1.13.2
+172.31.2.13   Ready    node     11h   v1.13.2
 ```
 
 ## 四 参考资料
