@@ -88,6 +88,34 @@ v0.11.0
 
 注：加粗部分是Master节点必须安装的组件，etcd可以部署在其他节点，也可以部署在Master节点，kubectl是管理kubernetes的命令行工具。其余部分是Node节点必选组件。
 
+### 2.3 节点或组件功能简介
+
+Master节点：
+Master节点上面主要由四个模块组成，apiserver，schedule，controller-manager，etcd。
+
+apiserver: 负责对外提供RESTful的kubernetes API 的服务，它是系统管理指令的统一接口，任何对资源的增删该查都要交给apiserver处理后再交给etcd。kubectl(kubernetes提供的客户端工具，该工具内部是对kubernetes API的调用）是直接和apiserver交互的。
+
+schedule: 负责调度Pod到合适的Node上，如果把scheduler看成一个黑匣子，那么它的输入是pod和由多个Node组成的列表，输出是Pod和一个Node的绑定。kubernetes目前提供了调度算法，同样也保留了接口。用户根据自己的需求定义自己的调度算法。
+
+controller-manager: 如果apiserver做的是前台的工作的话，那么controller-manager就是负责后台的。每一个资源都对应一个控制器。而control manager就是负责管理这些控制器的，比如我们通过APIServer创建了一个Pod，当这个Pod创建成功后，apiserver的任务就算完成了。
+
+etcd：etcd是一个高可用的键值存储系统，kubernetes使用它来存储各个资源的状态，从而实现了Restful的API。
+
+Node节点：
+每个Node节点主要由二个模块组成：kublet, kube-proxy。
+
+kube-proxy: 该模块实现了kubernetes中的服务发现和反向代理功能。kube-proxy支持TCP和UDP连接转发，默认基Round Robin算法将客户端流量转发到与service对应的一组后端pod。服务发现方面，kube-proxy使用etcd的watch机制监控集群中service和endpoint对象数据的动态变化，并且维护一个service到endpoint的映射关系，从而保证了后端pod的IP变化不会对访问者造成影响，另外，kube-proxy还支持session affinity。
+
+kublet：kublet是Master在每个Node节点上面的agent，是Node节点上面最重要的模块，它负责维护和管理该Node上的所有容器，但是如果容器不是通过kubernetes创建的，它并不会管理。本质上，它负责使Pod的运行状态与期望的状态一致。
+
+### 2.4 Kubernetes架构图
+
+![架构图](https://img-blog.csdnimg.cn/20190131142101943.jpg)
+
+### 2.5 Kubernetes工作流程图
+
+![工作流程图](https://img-blog.csdnimg.cn/20190131142519545.jpg)
+
 ## 三 操作步骤
 
 ### 3.1 针对性初始化设置
@@ -437,6 +465,18 @@ systemctl enable etcd.service --now
 systemctl status etcd
 ```
 
+几个节点上的安装过程大同小异，唯一不同的是etcd配置文件中的服务器IP要写当前节点的IP。主要参数：
+
+- ETCD_NAME：节点名称。
+- ETCD_DATA_DIR：数据目录。
+- ETCD_LISTEN_PEER_URLS：集群通信监听地址。
+- ETCD_LISTEN_CLIENT_URLS：客户端访问监听地址。
+- ETCD_INITIAL_ADVERTISE_PEER_URLS：集群通告地址。
+- ETCD_ADVERTISE_CLIENT_URLS：客户端通告地址。
+- ETCD_INITIAL_CLUSTER：集群节点地址。
+- ETCD_INITIAL_CLUSTER_TOKEN：集群Token。
+- ETCD_INITIAL_CLUSTER_STATE：加入集群的当前状态，new是新集群，existing表示加入已有集群。
+
 #### 3.4.3 验证etcd集群是否部署成功
 
 执行以下命令：
@@ -465,7 +505,7 @@ etcdctl \
 
 ### 3.5 部署Flannel网络
 
-由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。在每一个节点都需要进行配置，执行脚本KubernetesInstall-08.sh。
+由于Flannel需要使用etcd存储自身的一个子网信息，所以要保证能成功连接Etcd，写入预定义子网段。写入的Pod网段${CLUSTER_CIDR}必须是/16段地址，必须与kube-controller-manager的–-cluster-cidr参数值一致。一般情况下，在每一个Node节点都需要进行配置，执行脚本KubernetesInstall-08.sh。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-08.sh
@@ -718,6 +758,22 @@ systemctl enable kube-apiserver.service --now
 systemctl status kube-apiserver.service
 ```
 
+参数说明：
+
+- --logtostderr：启用日志。
+- --v：日志等级。
+- --etcd-servers：etcd集群地址。
+- --bind-address：监听地址。
+- --secure-port：https安全端口。
+- --advertise-address：集群通告地址。
+- --allow-privileged：启用授权。
+- --service-cluster-ip-range：Service虚拟IP地址段。
+- --enable-admission-plugins：准入控制模块。
+- --authorization-mode：认证授权，启用RBAC授权和节点自管理。
+- --enable-bootstrap-token-auth：启用TLS bootstrap功能。
+- --token-auth-file：token文件。
+- --service-node-port-range：Service Node类型默认分配端口范围。
+
 #### 3.6.3 安装配置kube-scheduler服务
 
 之前已经将kube-scheduler相关的二进制文件移动到了相关目录，直接执行脚本KubernetesInstall-11.sh。
@@ -759,6 +815,11 @@ systemctl enable kube-scheduler.service --now
 sleep 20
 systemctl status kube-scheduler.service
 ```
+
+参数说明：
+
+- --master：连接本地apiserver。
+- --leader-elect：当该组件启动多个时，自动选举（HA），被选为 leader的节点负责处理工作，其它节点为阻塞状态。
 
 #### 3.6.4 安装配置kube-controller服务
 
@@ -842,7 +903,7 @@ etcd-1               Healthy   {"health":"true"}
 
 #### 3.7.1 创建bootstrap和kube-proxy的kubeconfig文件
 
-在前面创建的token文件在这一步派上了用场，在Master节点上执行脚本KubernetesInstall-14.sh创建bootstrap.kubeconfig和kube-proxy.kubeconfig。
+Master apiserver启用TLS认证后，Node节点kubelet组件想要加入集群，必须使用CA签发的有效证书才能与apiserver通信，当Node节点很多时，签署证书是一件很繁琐的事情，因此有了TLS Bootstrapping机制，kubelet会以一个低权限用户自动向apiserver申请证书，kubelet的证书由apiserver动态签署。在前面创建的token文件在这一步派上了用场，在Master节点上执行脚本KubernetesInstall-14.sh创建bootstrap.kubeconfig和kube-proxy.kubeconfig。
 
 ```bash
 [root@gysl-master ~]# sh KubernetesInstall-14.sh
@@ -995,6 +1056,14 @@ systemctl status kubelet.service -l
 
 以上脚本有多少个Node节点就在相应的Node节点上执行多少次，每次执行只需修改IP的值即可。
 
+参数说明：
+
+- --hostname-override：在集群中显示的主机名。
+- --kubeconfig：指定kubeconfig文件位置，会自动生成。
+- --bootstrap-kubeconfig：指定刚才生成的bootstrap.kubeconfig文件。
+- --cert-dir：颁发证书存放位置。
+- --pod-infra-container-image：管理Pod网络的镜像。
+
 #### 3.7.3 Approve kubelet CSR请求
 
 可以手动或自动approve CSR请求。推荐使用自动的方式，因为从 v1.8 版本开始，可以自动轮转approve csr后生成的证书。未approve之前如下：
@@ -1094,9 +1163,11 @@ Commercial support is available at
 </html>
 ```
 
+如果此时在浏览器输入：<http://10.0.0.2:88> ，那么将出现nginx的默认页面。
+
 ### 3.9 在Master节点部署Node节点的相关组件
 
-资源比较充裕的情况下，Master节点仅仅做为服务接口、调度、控制节点，必须部署的组件有：kube-apiserver、kube-controller-manager、kube-scheduler、kubectl、etcd。除此之外，一般还需要做HA等相关部署。如果Master节点资源比较充裕，那么我们也可以将Master节点部署设置为一般节点来使用。为此，直接执行脚本KubernetesInstall-17.sh。
+资源比较充裕的情况下，Master节点仅仅做为服务接口、调度、控制节点，必须部署的组件有：kube-apiserver、kube-controller-manager、kube-scheduler、kubectl、etcd。除此之外，一般还需要做HA等相关部署。如果Master节点资源比较充裕，有些实验也要求至少有三个节点在运行，那么也可以将Master节点部署设置为一般Node节点来使用。为此，直接执行脚本KubernetesInstall-17.sh。
 
 ```bash
 [root@gysl-master ~]# KubernetesInstall-17.sh
@@ -1200,10 +1271,10 @@ NAME          STATUS   ROLES    AGE   VERSION
 
 ## 四 参考资料
 
-[认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
+4.1 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
 
-[证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
+4.2 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
 
-[cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
+4.3 [cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
 
-[Systemd](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
+4.4 [Systemd相关资料](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
