@@ -1269,12 +1269,24 @@ NAME          STATUS   ROLES    AGE   VERSION
 172.31.2.13   Ready    node     11h   v1.13.2
 ```
 
-## 四 参考资料
+## 四 总结
 
-4.1 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
+4.1 Kubernetes的二进制安装部署是一个比较复杂的过程，其中涉及到的步骤比较多，需要理解清楚各节点及组件之间的关系，逐步进行，每一个步骤成功了再进行下一步，切不可急躁。
 
-4.2 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
+4.2 在安装部署的过程中，日志及帮助信息是十分重要的，journalctl命令较为常用，--help也会起到柳暗花明又一村的效果。
 
-4.3 [cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
+4.3 把执行步骤脚本化，显得清晰有效，在后续的工作、学习过程中要继续保持。
 
-4.4 [Systemd相关资料](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
+4.4 由于时间仓促，安装部署中的很多个性化配置并未配置，在后续过程中会根据实际使用情况进行完善。比如：每一个服务或组件并未将日志单独保存。
+
+4.5 其他不尽如人意的地方正在完善。
+
+## 五 参考资料
+
+5.1 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
+
+5.2 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
+
+5.3 [cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
+
+5.4 [Systemd相关资料](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
