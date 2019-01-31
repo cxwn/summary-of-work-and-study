@@ -1281,6 +1281,8 @@ NAME          STATUS   ROLES    AGE   VERSION
 
 4.5 其他不尽如人意的地方正在完善。
 
+4.6 文中的两张图片来源于互联网，如有侵权，请联系删除。
+
 ## 五 参考资料
 
 5.1 [认证相关](https://k8smeetup.github.io/docs/admin/kubelet-authentication-authorization/)
