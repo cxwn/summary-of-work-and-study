@@ -2,7 +2,90 @@
 
 ## 一 背景
 
-## 二 环境
+由于众所周知的原因，在国内无法直接访问Google的服务。二进制包由于其下载方便、灵活定制而深受广大kubernetes使用者喜爱，成为企业部署生产环境比较流行的方式之一，Kubernetes v1.13.2是目前的最新版本。安装部署过程可能比较复杂、繁琐，因此在安装过程中尽可能将操作步骤脚本话。文中涉及到的脚本已经通过本人测试。
+
+## 二 环境及架构图
+
+### 2.1 软件环境
+
+OS（最小化安装版）：
+
+```bash
+cat /etc/centos-release
+```
+
+```text
+CentOS Linux release 7.6.1810 (Core)
+```
+
+Docker Engine：
+
+```bash
+docker version
+```
+
+```text
+Client:
+ Version:           18.06.0-ce
+ API version:       1.38
+ Go version:        go1.10.3
+ Git commit:        0ffa825
+ Built:             Wed Jul 18 19:08:18 2018
+ OS/Arch:           linux/amd64
+ Experimental:      false
+Server:
+ Engine:
+  Version:          18.06.0-ce
+  API version:      1.38 (minimum version 1.12)
+  Go version:       go1.10.3
+  Git commit:       0ffa825
+  Built:            Wed Jul 18 19:10:42 2018
+  OS/Arch:          linux/amd64
+  Experimental:     false
+```
+
+Kubenetes：
+
+```bash
+kubectl version
+```
+
+```text
+Client Version: version.Info{Major:"1", Minor:"13", GitVersion:"v1.13.2", GitCommit:"cff46ab41ff0bb44d8584413b598ad8360ec1def", GitTreeState:"clean", BuildDate:"2019-01-10T23:35:51Z", GoVersion:"go1.11.4", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"13", GitVersion:"v1.13.2", GitCommit:"cff46ab41ff0bb44d8584413b598ad8360ec1def", GitTreeState:"clean", BuildDate:"2019-01-10T23:28:14Z", GoVersion:"go1.11.4", Compiler:"gc", Platform:"linux/amd64"}
+```
+
+ETCD:
+
+```bash
+etcd --version
+```
+
+```text
+etcd Version: 3.3.11
+Git SHA: 2cf9e51d2
+Go Version: go1.10.7
+Go OS/Arch: linux/amd64
+```
+
+Flannel:
+
+```bash
+flanneld -version
+```
+
+```text
+v0.11.0
+```
+
+### 2.2 服务器规划
+
+|||||
+|:-:|:-:|:-:|:-:|
+|IP|主机名（Hostname）|角色（Role）|组件（Component）|
+|172.31.2.11|gysl-master|Master&&Node|kube-apiserver，kube-controller-manager，kube-scheduler，etcd，kubelet，kube-proxy|
+|172.31.2.12|gysl-node1|Node|kubelet，kube-proxy，docker，flannel，etcd|
+|172.31.2.13|gysl-node2|Node|kubelet，kube-proxy，docker，flannel，etcd|
 
 ## 三 操作步骤
 
@@ -1017,3 +1100,5 @@ Commercial support is available at
 [证书相关](https://kubernetes.io/zh/docs/concepts/cluster-administration/certificates/)
 
 [cfssl官方资料](https://blog.cloudflare.com/introducing-cfssl/)
+
+[Systemd](https://wiki.archlinux.org/index.php/systemd_(%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87))
