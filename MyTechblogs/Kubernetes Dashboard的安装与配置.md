@@ -116,5 +116,7 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiw
 ## 四 总结
 
 4.1 这是一个简单而快乐的过程，只要动手去做，其实很简单的！
+
 4.2 这次实验是部署在kubernetes v1.12.1的。
+
 4.3 实验使用的浏览器是Firefox v64.0.2，其他浏览器可能不支持。
