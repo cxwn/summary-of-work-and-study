@@ -22,6 +22,7 @@
 cpulimit.sh脚本内容：
 
 ```bash
+#!/bin/bash
 while true;  
     do  
         sleep 30;
