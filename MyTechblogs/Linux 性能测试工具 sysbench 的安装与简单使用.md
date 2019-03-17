@@ -364,9 +364,57 @@ sysbench 1.0.9 (using system LuaJIT 2.0.4)
 Removing test files...
 ```
 
-### 4.7 Mutex 测试
+### 4.7 线程测试
 
 #### 4.7.1 帮助信息
+
+```bash
+[gysl@gysl-DevOps ~]$ sysbench --test=threads help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+threads options:
+  --thread-yields=N number of yields to do per request [1000]
+  --thread-locks=N  number of locks per thread [8]
+```
+
+#### 4.7.2 测试过程
+
+```bash
+[gysl@gysl-DevOps ~]$ sudo sysbench  --test=threads --num-threads=500 --thread-yields=100 --thread-locks=4 run
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+WARNING: --num-threads is deprecated, use --threads instead
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 500
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+General statistics:
+    total time:                          10.5847s
+    total number of events:              50140
+
+Latency (ms):
+         min:                                  0.15
+         avg:                                104.54
+         max:                               1874.74
+         95th percentile:                    427.07
+         sum:                            5241634.75
+
+Threads fairness:
+    events (avg/stddev):           100.2800/25.55
+    execution time (avg/stddev):   10.4833/0.07
+```
+
+### 4.8 Mutex 测试
+
+#### 4.8.1 帮助信息
 
 ```bash
 [gysl@gysl-DevOps ~]$ sudo sysbench --test=mutex help
@@ -379,7 +427,7 @@ mutex options:
   --mutex-loops=N number of empty loops to do outside mutex lock [10000]
 ```
 
-#### 4.7.2 测试过程
+#### 4.8.2 测试过程
 
 ```bash
 [gysl@gysl-DevOps ~]$ sudo sysbench --test=mutex --mutex-num=2048 --mutex-locks=20000 --mutex-loops=5000 run
@@ -390,11 +438,9 @@ Running the test with following options:
 Number of threads: 1
 Initializing random number generator from current time
 
-
 Initializing worker threads...
 
 Threads started!
-
 
 General statistics:
     total time:                          0.0342s
@@ -414,5 +460,10 @@ Threads fairness:
 
 ## 五 总结
 
+5.1 对于数据库的测试，本文未进行介绍，后续遇到该情况时会进行介绍。
 
-http://www.cnblogs.com/zhoujinyi/archive/2013/04/19/3029134.html
+5.2 由于时间仓促，文章中大部分英文本人并未进行翻译，但是涉及到的英文都不算难。
+
+5.3 磁盘I/O测试中，--file-extra-flags 选项比较重要，有的存储设备是直接I/O，其他详情还请查阅相关资料。
+
+5.4 本文仅仅根据帮助信息整理完成，其他详情还请参考官方手册。
