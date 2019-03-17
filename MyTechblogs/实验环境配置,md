@@ -1,0 +1,19 @@
+# 实验环境配置
+
+## 一 默认环境
+
+### 1.1 操作系统
+
+```bash
+[root@gysl-DevOps ~]# cat /etc/centos-release
+CentOS Linux release 7.6.1810 (Core)
+```
+
+### 2.1 Swap 设置
+
+```bash
+[root@gysl-DevOps ~]# free -h
+              total        used        free      shared  buff/cache   available
+Mem:           972M        182M        175M        7.6M        615M        571M
+Swap:            0B          0B          0B
+```
