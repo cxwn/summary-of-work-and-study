@@ -154,7 +154,7 @@ cpu options:
   --cpu-max-prime=N upper limit for primes generator [10000]
 ```
 
-### 4.4.2 测试过程
+#### 4.4.2 测试过程
 
 ```bash
 [gysl@gysl-DevOps ~]$ sudo sysbench --test=cpu --cpu-max-prime=5000 run
