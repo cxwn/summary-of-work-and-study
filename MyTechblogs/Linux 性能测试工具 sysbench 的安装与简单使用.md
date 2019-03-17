@@ -9,11 +9,11 @@ sysbench是一款开源的多线程性能测试工具，可以执行CPU/内存/�
 **sysbench 支持以下几种测试模式 ：**
 
 - 1、CPU运算性能
-- 2、磁盘IO性能
-- 3、调度程序性能
-- 4、内存分配及传输速度
-- 5、POSIX线程性能
-- 6、数据库性能(OLTP基准测试)。目前sysbench主要支持 mysql,drizzle,pgsql,oracle 等几种数据库。
+- 2、内存分配及传输速度
+- 3、磁盘IO性能
+- 4、POSIX线程性能
+- 5、互斥性测试
+- 6、数据库性能(OLTP基准测试)。目前sysbench主要支持 MySQL,PostgreSQL 等几种数据库。
 
 ## 二 实验环境
 
@@ -49,17 +49,19 @@ sysbench 1.0.9
 
 ```bash
 [gysl@gysl-DevOps ~]$ sysbench --help
+
+See 'sysbench --test=<name> help' for a list of options for each test. #查看每个测试项目的更多选项列表
 Usage:
 sysbench [options]... [testname] [command]
 
 Commands implemented by most tests: prepare run cleanup help
 
 General options:
-  --threads=N                     number of threads to use [1]
+  --threads=N                     number of threads to use [1] #创建测试线程的数目。默认为1。  
   --events=N                      limit for total number of events [0]
   --time=N                        limit for total execution time in seconds [10]
-  --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off]
-  --thread-stack-size=SIZE        size of stack per thread [64K]
+  --forced-shutdown=STRING        number of seconds to wait after the --time limit before forcing shutdown, or 'off' to disable [off] #超过max-time强制中断。默认是off。  
+  --thread-stack-size=SIZE        size of stack per thread [64K] #每个线程的堆栈大小。默认是32K。  
   --rate=N                        average transactions rate. 0 for unlimited rate [0]
   --report-interval=N             periodically report intermediate statistics with a specified interval in seconds. 0 disables intermediate reports [0]
   --report-checkpoints=[LIST,...] dump full statistics and reset all counters at specified points in time. The argument is a list of comma-separated values representing the amount of time in seconds elapsed from start of test when report checkpoint(s) must be performed. Report checkpoints are off by default. []
@@ -69,8 +71,8 @@ General options:
   --version[=on|off]              print version and exit [off]
   --config-file=FILENAME          File containing command line options
   --tx-rate=N                     deprecated alias for --rate [0]
-  --max-requests=N                deprecated alias for --events [0]
-  --max-time=N                    deprecated alias for --time [0]
+  --max-requests=N                deprecated alias for --events [0] #请求的最大数目。默认为10000，0代表不限制。  
+  --max-time=N                    deprecated alias for --time [0] #最大执行时间，单位是s。默认是0,不限制。  
   --num-threads=N                 deprecated alias for --threads [1]
 
 Pseudo-Random Numbers Generator options:
@@ -131,17 +133,286 @@ See 'sysbench <testname> help' for a list of options for each test.
 
 ### 4.3 测试过程
 
-sysbench 的测试过程分为三个阶段：
+sysbench 的测试过程一般分为三个阶段：
 
 - prepare：准备阶段，准备测试数据。
 - run：执行测试阶段。
 - cleanup：清理垃圾数据阶段。
 
-## 五 总结
+### 4.4 CPU 性能测试
+
+找出指定范围内最大质数，时间越短 CPU 性能越好。
+
+#### 4.4.1 查看帮助信息
 
 ```bash
-sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw prepare
-sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw run
-sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw cleanup
+[gysl@gysl-DevOps ~]$ sysbench --test=cpu help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+cpu options:
+  --cpu-max-prime=N upper limit for primes generator [10000]
 ```
+
+### 4.4.2 测试过程
+
+```bash
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=cpu --cpu-max-prime=5000 run
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+Prime numbers limit: 5000
+
+Initializing worker threads...
+
+Threads started!
+
+CPU speed:
+    events per second:  3059.82
+
+General statistics:
+    total time:                          10.0002s
+    total number of events:              30603
+
+Latency (ms):
+         min:                                  0.29
+         avg:                                  0.33
+         max:                                  6.10
+         95th percentile:                      0.50
+         sum:                               9979.54
+
+Threads fairness:
+    events (avg/stddev):           30603.0000/0.00
+    execution time (avg/stddev):   9.9795/0.00
+```
+
+本次测试中，线程数为1，质数个数为5000。
+
+### 4.5 内存测试
+
+#### 4.5.1 查看帮助信息
+
+```bash
+[gysl@gysl-DevOps ~]$ sysbench --test=memory help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+memory options:
+  --memory-block-size=SIZE    size of memory block for test [1K]
+  --memory-total-size=SIZE    total size of data to transfer [100G]
+  --memory-scope=STRING       memory access scope {global,local} [global]
+  --memory-hugetlb[=on|off]   allocate memory from HugeTLB pool [off]
+  --memory-oper=STRING        type of memory operations {read, write, none} [write]
+  --memory-access-mode=STRING memory access mode {seq,rnd} [seq]
+```
+
+#### 4.5.2 测试过程
+
+```bash
+[gysl@gysl-DevOps ~]$ free -h
+              total        used        free      shared  buff/cache   available
+Mem:           972M        137M        313M        7.6M        521M        637M
+Swap:            0B          0B          0B
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=memory --memory-block-size=8k --memory-total-size=972M run
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+Running memory speed test with the following options:
+  block size: 8KiB
+  total size: 972MiB
+  operation: write
+  scope: global
+
+Initializing worker threads...
+
+Threads started!
+
+Total operations: 124416 (1603394.35 per second)
+
+972.00 MiB transferred (12526.52 MiB/sec)
+
+General statistics:
+    total time:                          0.0761s
+    total number of events:              124416
+
+Latency (ms):
+         min:                                  0.00
+         avg:                                  0.00
+         max:                                  0.93
+         95th percentile:                      0.00
+         sum:                                 61.24
+
+Threads fairness:
+    events (avg/stddev):           124416.0000/0.00
+    execution time (avg/stddev):   0.0612/0.00
+```
+
+### 4.6 磁盘I/O测试
+
+#### 4.6.1 查看帮助信息
+
+```bash
+[gysl@gysl-DevOps ~]$ sysbench --test=fileio help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+fileio options:
+  --file-num=N              number of files to create [128]
+  --file-block-size=N       block size to use in all IO operations [16384]
+  --file-total-size=SIZE    total size of files to create [2G]
+  --file-test-mode=STRING   test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}
+  --file-io-mode=STRING     file operations mode {sync,async,mmap} [sync]
+  --file-async-backlog=N    number of asynchronous operatons to queue per thread [128]
+  --file-extra-flags=STRING additional flags to use on opening files {sync,dsync,direct} []
+  --file-fsync-freq=N       do fsync() after this number of requests (0 - don't use fsync()) [100]
+  --file-fsync-all[=on|off] do fsync() after each write operation [off]
+  --file-fsync-end[=on|off] do fsync() at the end of test [on]
+  --file-fsync-mode=STRING  which method to use for synchronization {fsync, fdatasync} [fsync]
+  --file-merged-requests=N  merge at most this number of IO requests if possible (0 - don't merge) [0]
+  --file-rw-ratio=N         reads/writes ratio for combined test [1.5]
+```
+
+#### 4.6.2 测试过程
+
+```bash
+[gysl@gysl-DevOps ~]$ sysbench --test=fileio help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+fileio options:
+  --file-num=N              number of files to create [128]
+  --file-block-size=N       block size to use in all IO operations [16384]
+  --file-total-size=SIZE    total size of files to create [2G]
+  --file-test-mode=STRING   test mode {seqwr, seqrewr, seqrd, rndrd, rndwr, rndrw}
+  --file-io-mode=STRING     file operations mode {sync,async,mmap} [sync]
+  --file-async-backlog=N    number of asynchronous operatons to queue per thread [128]
+  --file-extra-flags=STRING additional flags to use on opening files {sync,dsync,direct} []
+  --file-fsync-freq=N       do fsync() after this number of requests (0 - don't use fsync()) [100]
+  --file-fsync-all[=on|off] do fsync() after each write operation [off]
+  --file-fsync-end[=on|off] do fsync() at the end of test [on]
+  --file-fsync-mode=STRING  which method to use for synchronization {fsync, fdatasync} [fsync]
+  --file-merged-requests=N  merge at most this number of IO requests if possible (0 - don't merge) [0]
+  --file-rw-ratio=N         reads/writes ratio for combined test [1.5]
+
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw prepare
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+128 files, 8192Kb each, 1024Mb total
+Creating files for the test...
+Extra file open flags: 0
+Creating file test_file.0
+Creating file test_file.1
+.......................
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw run
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+Extra file open flags: 0
+128 files, 8MiB each
+1GiB total file size
+Block size 16KiB
+Number of IO requests: 0
+Read/Write ratio for combined random IO test: 1.50
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing random r/w test
+Initializing worker threads...
+
+Threads started!
+
+File operations:
+    reads/s:                      2042.32
+    writes/s:                     1361.55
+    fsyncs/s:                     4351.23
+
+Throughput:
+    read, MiB/s:                  31.91
+    written, MiB/s:               21.27
+
+General statistics:
+    total time:                          10.0190s
+    total number of events:              78021
+
+Latency (ms):
+         min:                                  0.00
+         avg:                                  0.13
+         max:                                105.19
+         95th percentile:                      0.16
+         sum:                               9932.94
+
+Threads fairness:
+    events (avg/stddev):           78021.0000/0.00
+    execution time (avg/stddev):   9.9329/0.00
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=fileio --num-threads=1 --file-total-size=1G --file-test-mode=rndrw cleanup
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Removing test files...
+```
+
+### 4.7 Mutex 测试
+
+#### 4.7.1 帮助信息
+
+```bash
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=mutex help
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+mutex options:
+  --mutex-num=N   total size of mutex array [4096]
+  --mutex-locks=N number of mutex locks to do per thread [50000]
+  --mutex-loops=N number of empty loops to do outside mutex lock [10000]
+```
+
+#### 4.7.2 测试过程
+
+```bash
+[gysl@gysl-DevOps ~]$ sudo sysbench --test=mutex --mutex-num=2048 --mutex-locks=20000 --mutex-loops=5000 run
+WARNING: the --test option is deprecated. You can pass a script name or path on the command line without any options.
+sysbench 1.0.9 (using system LuaJIT 2.0.4)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+General statistics:
+    total time:                          0.0342s
+    total number of events:              1
+
+Latency (ms):
+         min:                                 33.58
+         avg:                                 33.58
+         max:                                 33.58
+         95th percentile:                     33.72
+         sum:                                 33.58
+
+Threads fairness:
+    events (avg/stddev):           1.0000/0.00
+    execution time (avg/stddev):   0.0336/0.00
+```
+
+## 五 总结
+
+
 http://www.cnblogs.com/zhoujinyi/archive/2013/04/19/3029134.html
