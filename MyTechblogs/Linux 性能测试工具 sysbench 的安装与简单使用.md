@@ -390,11 +390,9 @@ Running the test with following options:
 Number of threads: 500
 Initializing random number generator from current time
 
-
 Initializing worker threads...
 
 Threads started!
-
 
 General statistics:
     total time:                          10.5847s
