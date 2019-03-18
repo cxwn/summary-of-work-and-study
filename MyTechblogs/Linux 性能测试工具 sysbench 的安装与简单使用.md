@@ -465,3 +465,11 @@ Threads fairness:
 5.3 磁盘I/O测试中，--file-extra-flags 选项比较重要，有的存储设备是直接I/O，其他详情还请查阅相关资料。
 
 5.4 本文仅仅根据帮助信息整理完成，其他详情还请参考官方手册。
+
+## 六 参考资料
+
+6.1 [相关资料](https://www.howtoforge.com/how-to-benchmark-your-system-cpu-file-io-mysql-with-sysbench)
+
+6.2 [相关手册](https://github.com/mrivandu/E-books/blob/master/SomeManuals/sysbench-manual.pdf)
+
+6.3 [IO测试参考](https://wiki.gentoo.org/wiki/Sysbench#Using_the_fileio_workload)
