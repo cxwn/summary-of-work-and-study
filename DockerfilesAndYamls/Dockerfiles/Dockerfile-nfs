@@ -1,0 +1,4 @@
+mount -t tmpfs -o size=100m  tmpfs /high-speed-storage &&\
+echo '$i /tmpfs *(fsid=0,rw,no_root_squash,no_subtree_check)'
+docker run -it --rm --privileged centos:7.4.1708
+rpcbind;rpc.mountd;rpc.rquotad;rpc.statd
