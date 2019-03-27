@@ -28,11 +28,7 @@ cat>/etc/sysctl.d/docker.conf<<EOF
 net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
-<<<<<<< HEAD
 EOF 
-=======
-EOF  
->>>>>>> 451b41f3367fd3e21f979b9c7e638272a46b3b86
 sysctl -p /etc/sysctl.d/docker.conf>&/dev/null 
 # Turn off and disable the firewalld.  
 systemctl stop firewalld  
