@@ -24,11 +24,12 @@ if [ $? -eq 0 ] ;
         exit 110
 fi
 # Modify related kernel parameters. 
-cat>/etc/sysctl.d/kubernetes.conf<<EOF
+cat>/etc/sysctl.d/docker.conf<<EOF
 net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
-EOF sysctl -p /etc/sysctl.d/docker.conf>&/dev/null 
+EOF 
+sysctl -p /etc/sysctl.d/docker.conf>&/dev/null 
 # Turn off and disable the firewalld.  
 systemctl stop firewalld  
 systemctl disable firewalld  
@@ -37,8 +38,13 @@ sed -i.bak 's/=enforcing/=disabled/' /etc/selinux/config
 # Disable the swap.  
 sed -i.bak 's/^.*swap/#&/g' /etc/fstab
 # Install EPEL/vim/git.  
-yum -y install epel-release vim git
+yum -y install epel-release vim git tree
 yum repolist
+# Alias vim. 
+cat>/etc/profile.d/vim.sh<<EOF
+alias vi='vim'
+EOF
+source /etc/profile.d/vim.sh
 # Add a docker user.
 useradd $UserName
 echo $PassWord|passwd $UserName --stdin
