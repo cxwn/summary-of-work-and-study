@@ -21,10 +21,10 @@ spec:
         resources:
           limits:
             cpu: "2"
-            memory: 2Gi
+            memory: 4Gi
           requests:
             cpu: "1"
-            memory: 1Gi
+            memory: 2Gi
         env:
         - name: MODELSPATH
           value: /usr/local/models
@@ -43,10 +43,10 @@ spec:
         resources:
           limits:
             cpu: "2"
-            memory: 2Gi
+            memory: 4Gi
           requests:
             cpu: "1"
-            memory: 1Gi
+            memory: 2Gi
         tty: true
         stdin: true
         env:
@@ -66,4 +66,4 @@ spec:
       volumes:
       - name: asr-volume
         persistentVolumeClaim:
-          claimName: ms-asr-pvc
+          claimName: asr-pvc

@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ms-asr-pvc
+  name: asr-pvc
   labels: 
-    app: ms-asr
+    app: asr-pvc
 spec:
   accessModes:
     - ReadWriteMany
