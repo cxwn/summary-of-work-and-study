@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asr
+  labels:
+    app: asr
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: asr
+  template:
+    metadata:
+      labels:
+        app: asr
+    spec:
+      containers:
+      - name: richland
+        image: richland:v1.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        env:
+        - name: MODELSPATH
+          value: /usr/local/models
+        - name: ENGINE_CONFIG_OVERRIDE
+          value: /usr/local/models/models3.json
+        ports:
+        - containerPort: 50051
+          hostPort: 50051
+          protocol: TCP
+        volumeMounts:
+        - name: asr-volume
+          mountPath: /usr/local/models
+      - name: speechhost
+        image: speechhost:v1.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        tty: true
+        stdin: true
+        env:
+        - name: SR_URL
+          value: localhost:50051 
+        volumeMounts:
+        - name: asr-volume
+          mountPath: /home/henlin/SpeechHost
+        ports:
+        - containerPort: 34932
+          protocol: TCP
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: asr-volume
+        persistentVolumeClaim:
+          claimName: ms-asr-pvc
