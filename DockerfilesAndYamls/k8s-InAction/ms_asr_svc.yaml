@@ -10,4 +10,5 @@ spec:
   - name: asr
     protocol: TCP
     port:  34932
+    nodePort: 34932
     targetPort:  34932

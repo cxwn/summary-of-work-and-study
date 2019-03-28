@@ -32,7 +32,6 @@ spec:
           value: /usr/local/models/models3.json
         ports:
         - containerPort: 50051
-          hostPort: 50051
           protocol: TCP
         volumeMounts:
         - name: asr-volume
