@@ -18,9 +18,12 @@ while true;
             then
                 echo "Congratulations! All software packages have been downloaded."
                 break
+            else
+                echo "Downloading failed. Please try again!"
+                exit 101
         fi
     done
-if [ `sha512sum $PackageName`==$Sha512sum ];
+if [ $? -eq 0 ];
     then
         tar -cvzf kubernetes-server-linux-amd64.tar.gz
         ssh-keygen -b 1024 -t rsa -C 'Kubernetes'
@@ -31,5 +34,5 @@ if [ `sha512sum $PackageName`==$Sha512sum ];
             done
     else
         echo "Installation failed. Please try again!"
-        exit 101
+        exit 102
 fi
