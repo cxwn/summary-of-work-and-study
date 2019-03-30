@@ -346,7 +346,7 @@ ETCD_SERVICE=/usr/lib/systemd/system/etcd.service
 tar -xzf etcd-v3.3.11-linux-amd64.tar.gz
 cp -p etcd-v3.3.11-linux-amd64/etc* /usr/local/bin/
 
-# The etcd configuration file. 
+# The etcd configuration file.  
 cat>$ETCD_CONF<<EOF
 #[Member]
 ETCD_NAME="etcd-01"
