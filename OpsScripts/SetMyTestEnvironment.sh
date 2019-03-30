@@ -45,6 +45,7 @@ cat>/etc/profile.d/vim.sh<<EOF
 alias vi='vim'
 EOF
 source /etc/profile.d/vim.sh
+echo "set nu">>/etc/vimrc
 # Add a docker user.
 useradd $UserName
 echo $PassWord|passwd $UserName --stdin
