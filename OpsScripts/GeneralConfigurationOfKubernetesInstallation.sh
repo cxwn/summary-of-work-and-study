@@ -7,7 +7,8 @@ KubeConf='/etc/kubernetes/conf.d'
 KubeCA='/etc/kubernetes/ca.d'
 EtcdConf='/etc/etcd/conf.d'
 EtcdCA='/etc/etcd/ca.d'
-mkdir -p {$KubeConf,$KubeCA,$EtcdConf,$EtcdCA}
+FlanneldConf='/etc/flanneld'
+mkdir -p {$KubeConf,$KubeCA,$EtcdConf,$EtcdCA,${FlanneldConf}}
 
 for hostname in ${!HostIP[@]}
     do
@@ -15,13 +16,3 @@ for hostname in ${!HostIP[@]}
 ${HostIP[${hostname}]} ${hostname}
 EOF
     done
-
-systemctl daemon-reload
-systemctl enable kubelet.service --now
-sleep 20
-systemctl status kubelet.service -l
-
-systemctl daemon-reload
-systemctl enable kube-proxy.service --now
-sleep 20
-systemctl status kube-proxy.service -l

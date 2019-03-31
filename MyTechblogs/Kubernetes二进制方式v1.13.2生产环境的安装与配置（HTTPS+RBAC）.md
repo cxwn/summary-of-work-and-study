@@ -790,9 +790,9 @@ systemctl status kube-apiserver.service
 KUBE_ETC=/etc/kubernetes
 KUBE_SCHEDULER_CONF=$KUBE_ETC/kube-scheduler.conf
 cat>$KUBE_SCHEDULER_CONF<<EOF
-KUBE_SCHEDULER_OPTS="--logtostderr=true \
---v=4 \
---master=127.0.0.1:8080 \
+KUBE_SCHEDULER_OPTS="--logtostderr=true \\
+--v=4 \\
+--master=127.0.0.1:8080 \\
 --leader-elect"
 EOF
 
@@ -1087,11 +1087,11 @@ certificatesigningrequest.certificates.k8s.io/node-csr-YYfnPwAws2LxJzV-OgYjJ22zy
 
 ```bash
 #!/bin/bash
-CSRS=$(kubectl get csr | awk '{if(NR>1) print $1}')
-for csr in $CSRS;
-    do
-        kubectl certificate approve $csr;
-    done
+CSRs=$(kubectl get csr | awk '{if(NR>1) print $1}')
+for csr in ${CSRS[*]}
+  do
+    kubectl certificate approve $csr;
+  done
 ```
 
 #### 3.7.4 查看集群状态
