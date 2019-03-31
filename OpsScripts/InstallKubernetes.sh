@@ -193,6 +193,8 @@ for node_ip in ${EtcdIP[@]}
     fi
   done
 systemctl daemon-reload && systemctl enable etcd.service --now && systemctl status etcd -l
+echo "Please wait a moment!"
+sleep 60
 
 # Deploy the master node. 
 ## Create CAs of kubernetes cluster.
@@ -571,6 +573,7 @@ for node_ip in ${HostIP[@]}
       ssh root@${node_ip} "sed -i 's/=10.1.1.60/=${node_ip}/g'" ${KubeConf}/kube-proxy.conf
       ssh root@${node_ip} "sed -i 's/=10.1.1.60/=${node_ip}/g'" ${KubeConf}/kubelet.conf
       ssh root@${node_ip} "sed -i 's/10.1.1.60/${node_ip}/g'" ${KubeConf}/kubelet.yaml
+      ssh root@${node_ip} "docker pull registry.cn-hangzhou.aliyuncs.com/google-containers/pause-amd64:3.0"
       scp -p temp/{kubelet.service,kube-proxy.service} root@${node_ip}:/usr/lib/systemd/system/
       scp -p ${KubeCA}/{bootstrap.kubeconfig,kube-proxy.kubeconfig} root@${node_ip}:${KubeConf}
       ssh root@${node_ip} "sed -i.bak -e '/ExecStart/i EnvironmentFile=\/run\/flannel\/subnet.env' -e 's/ExecStart=\/usr\/bin\/dockerd/ExecStart=\/usr\/bin\/dockerd \$DOCKER_NETWORK_OPTIONS/g' /usr/lib/systemd/system/docker.service"
@@ -579,10 +582,10 @@ for node_ip in ${HostIP[@]}
     fi
   done
 mv {${FlanneldConf},/usr/lib/systemd/system/flanneld.service} temp/
-sleep 60
+sleep 300
 
 CSRs=$(kubectl get csr | awk '{if(NR>1) print $1}')
-for csr in ${CSRS[*]}
+for csr in ${CSRs[*]}
   do
     kubectl certificate approve ${csr}
   done
@@ -590,9 +593,9 @@ for csr in ${CSRS[*]}
 for node_ip in ${HostIP[@]}
   do  
     if [ "${node_ip}" == "${HostIP[gysl-master]}" ] ;then
-      kubectl label node ${node_ip} node-role.kubernetes.io/master='Master'
+      kubectl label node ${node_ip} node-role.kubernetes.io/master='master'
     else
-      kubectl label node ${node_ip} node-role.kubernetes.io/node='Node'
+      kubectl label node ${node_ip} node-role.kubernetes.io/node='node'
     fi
   done
 

@@ -10,7 +10,6 @@ EtcdCA='/etc/etcd/ca.d'
 FlanneldConf='/etc/flanneld'
 
 mkdir -p {${KubeConf},${KubeCA},${EtcdConf},${EtcdCA},${FlanneldConf}}
-
 for hostname in ${!HostIP[@]}
     do
         cat>>/etc/hosts<<EOF
