@@ -930,7 +930,7 @@ kubectl config set-credentials kubelet-bootstrap \
   --token=${BOOTSTRAP_TOKEN} \
   --kubeconfig=bootstrap.kubeconfig
 
-# Set context parameters. 
+# Set context parameters.  
 kubectl config set-context default \
   --cluster=kubernetes \
   --user=kubelet-bootstrap \
@@ -939,7 +939,7 @@ kubectl config set-context default \
 # Set context.
 kubectl config use-context default --kubeconfig=bootstrap.kubeconfig
 
-# Create kube-proxy kubeconfig file. 
+# Create kube-proxy kubeconfig file.  
 kubectl config set-cluster kubernetes \
   --certificate-authority=./ca.pem \
   --embed-certs=true \
