@@ -8,7 +8,8 @@ KubeCA='/etc/kubernetes/ca.d'
 EtcdConf='/etc/etcd/conf.d'
 EtcdCA='/etc/etcd/ca.d'
 FlanneldConf='/etc/flanneld'
-mkdir -p {$KubeConf,$KubeCA,$EtcdConf,$EtcdCA,${FlanneldConf}}
+
+mkdir -p {${KubeConf},${KubeCA},${EtcdConf},${EtcdCA},${FlanneldConf}}
 
 for hostname in ${!HostIP[@]}
     do

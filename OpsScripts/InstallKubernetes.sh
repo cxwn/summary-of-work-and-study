@@ -136,7 +136,7 @@ ETCD_LISTEN_CLIENT_URLS="https://${HostIP[gysl-master]}:2379"
 #[Clustering]
 ETCD_INITIAL_ADVERTISE_PEER_URLS="https://${HostIP[gysl-master]}:2380"
 ETCD_ADVERTISE_CLIENT_URLS="https://${HostIP[gysl-master]}:2379"
-ETCD_INITIAL_CLUSTER="etcd-master=https://${HostIP[gysl-master]}:2380,etcd-01=https://${HostIP[gysl-node1]}:2380,etcd-02=https://$HostIP[gysl-node2]}:2380,etcd-03=https://$HostIP[gysl-node3]}:2380"
+ETCD_INITIAL_CLUSTER="etcd-master=https://${HostIP[gysl-master]}:2380,etcd-01=https://${HostIP[gysl-node1]}:2380,etcd-02=https://${HostIP[gysl-node2]}:2380,etcd-03=https://${HostIP[gysl-node3]}:2380"
 ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster"
 ETCD_INITIAL_CLUSTER_STATE="new"
 EOF
@@ -175,8 +175,6 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload && systemctl enable etcd.service --now && systemctl status etcd -l
-
 ## Copy some file to node. 
 for node_ip in ${EtcdIP[@]}
   do  
@@ -194,6 +192,7 @@ for node_ip in ${EtcdIP[@]}
         done
     fi
   done
+systemctl daemon-reload && systemctl enable etcd.service --now && systemctl status etcd -l
 
 # Deploy the master node. 
 ## Create CAs of kubernetes cluster.
@@ -303,7 +302,7 @@ EOF
 cat >${KubeConf}/apiserver.conf<<EOF
 KUBE_APISERVER_OPTS="--logtostderr=true \\
 --v=4 \\
---etcd-servers=https://${HostIP[gysl-master]}:2379,https://$HostIP[gysl-node1]}:2379,https://$HostIP[gysl-node2]}:2379,https://$HostIP[gysl-node3]}:2379 \\
+--etcd-servers=https://${HostIP[gysl-master]}:2379,https://${HostIP[gysl-node1]}:2379,https://${HostIP[gysl-node2]}:2379,https://${HostIP[gysl-node3]}:2379 \\
 --bind-address=${HostIP[gysl-master]} \\
 --secure-port=6443 \\
 --advertise-address=${HostIP[gysl-master]} \\
@@ -482,7 +481,7 @@ EOF
 cat>temp/kubelet.yaml<<EOF
 kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
-address: $node_ip
+address: ${HostIP[gysl-master]}
 port: 10250
 readOnlyPort: 10255
 cgroupDriver: cgroupfs
@@ -501,7 +500,7 @@ KUBELET_OPTS="--logtostderr=true \
 --kubeconfig=${KubeConf}/kubelet.kubeconfig \
 --bootstrap-kubeconfig=${KubeConf}/bootstrap.kubeconfig \
 --config=${KubeConf}/kubelet.yaml \
---cert-dir=$KubeCA \
+--cert-dir=${KubeCA} \
 --pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google-containers/pause-amd64:3.0"
 EOF
 
@@ -526,21 +525,21 @@ etcdctl \
 --ca-file=${EtcdCA}/ca.pem \
 --cert-file=${EtcdCA}/server.pem \
 --key-file=${EtcdCA}/server-key.pem \
---endpoints="https://${HostIP[gysl-master]}:2379,https://$HostIP[gysl-node1]}:2379,https://$HostIP[gysl-node2]}:2379,https://$HostIP[gysl-node3]}:2379" cluster-health
+--endpoints="https://${HostIP[gysl-master]}:2379,https://${HostIP[gysl-node1]}:2379,https://${HostIP[gysl-node2]}:2379,https://${HostIP[gysl-node3]}:2379" cluster-health
 
 ## Writing into a predetermined subnetwork.
 cd ${EtcdCA}
 etcdctl \
 --ca-file=ca.pem --cert-file=server.pem --key-file=server-key.pem \
---endpoints="https://${HostIP[gysl-master]}:2379,https://$HostIP[gysl-node1]}:2379,https://$HostIP[gysl-node2]}:2379,https://$HostIP[gysl-node3]}:2379" \
+--endpoints="https://${HostIP[gysl-master]}:2379,https://${HostIP[gysl-node1]}:2379,https://${HostIP[gysl-node2]}:2379,https://${HostIP[gysl-node3]}:2379" \
 set /coreos.com/network/config  '{ "Network": "172.17.0.0/16", "Backend": {"Type": "vxlan"}}'
 cd ${WorkDir}
 
 ## Configuration the flannel service.
 cat>${FlanneldConf}/flanneld.conf<<EOF
 FLANNEL_OPTIONS="--etcd-endpoints=https://${HostIP[gysl-master]}:2379,\
-https://$HostIP[gysl-node1]}:2379,https://$HostIP[gysl-node2]}:2379,\
-https://$HostIP[gysl-node3]}:2379 \
+https://${HostIP[gysl-node1]}:2379,https://${HostIP[gysl-node2]}:2379,\
+https://${HostIP[gysl-node3]}:2379 \
 -etcd-cafile=${EtcdCA}/ca.pem -etcd-certfile=${EtcdCA}/server.pem -etcd-keyfile=${EtcdCA}/server-key.pem"
 EOF
 
@@ -569,6 +568,9 @@ for node_ip in ${HostIP[@]}
       scp -p ${FlanneldConf}/flanneld.conf root@${node_ip}:${FlanneldConf}/flanneld.conf
       scp -p /usr/lib/systemd/system/flanneld.service root@${node_ip}:/usr/lib/systemd/system/flanneld.service
       scp -p temp/{kubelet.yaml,kubelet.conf,kube-proxy.conf} root@${node_ip}:${KubeConf}/
+      ssh root@${node_ip} "sed -i 's/=10.1.1.60/=${node_ip}/g'" ${KubeConf}/kube-proxy.conf
+      ssh root@${node_ip} "sed -i 's/=10.1.1.60/=${node_ip}/g'" ${KubeConf}/kubelet.conf
+      ssh root@${node_ip} "sed -i 's/10.1.1.60/${node_ip}/g'" ${KubeConf}/kubelet.yaml
       scp -p temp/{kubelet.service,kube-proxy.service} root@${node_ip}:/usr/lib/systemd/system/
       scp -p ${KubeCA}/{bootstrap.kubeconfig,kube-proxy.kubeconfig} root@${node_ip}:${KubeConf}
       ssh root@${node_ip} "sed -i.bak -e '/ExecStart/i EnvironmentFile=\/run\/flannel\/subnet.env' -e 's/ExecStart=\/usr\/bin\/dockerd/ExecStart=\/usr\/bin\/dockerd \$DOCKER_NETWORK_OPTIONS/g' /usr/lib/systemd/system/docker.service"
@@ -577,6 +579,7 @@ for node_ip in ${HostIP[@]}
     fi
   done
 mv {${FlanneldConf},/usr/lib/systemd/system/flanneld.service} temp/
+sleep 60
 
 CSRs=$(kubectl get csr | awk '{if(NR>1) print $1}')
 for csr in ${CSRS[*]}
