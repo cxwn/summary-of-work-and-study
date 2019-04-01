@@ -2,18 +2,18 @@
 
 ## 一 环境
 
-|操作系统|Docker版本|Kubernetes版本|Etcd版本|Flannel版本|
-|:-:|:-:|:-:|:-:|:-:|
-|CentOS Linux release 7.6.1810|Docker version 18.09.4|v1.14.0|Version: 3.3.12|v0.11.0|
+操作系统|Docker版本|Kubernetes版本|Etcd版本|Flannel版本|
+:-:|:-:|:-:|:-:|:-:
+CentOS Linux release 7.6.1810|Docker version 18.09.4|v1.14.0|Version: 3.3.12|v0.11.0
 
 ## 二 架构
 
-|主机名|IP|角色|部署应用|
-|:-:|:-:|:-:|:-:|
-|gysl-master|10.1.1.60|Msater|Docker/Kube-apiserver/kube-scheduler/kube-controller-manager/etcd|
-|gysl-node1|10.1.1.61|Node|Docker/Kubelet/kube-proxy/flanneld/etcd|
-|gysl-node2|10.1.1.62|Node|Docker/Kubelet/kube-proxy/flanneld/etcd|
-|gysl-node3|10.1.1.63|Node|Docker/Kubelet/kube-proxy/flanneld/etcd|
+主机名|IP|角色|部署应用
+:-:|:-:|:-:|:-:
+gysl-master|10.1.1.60|Msater|Docker/Kube-apiserver/kube-scheduler/kube-controller-manager/etcd
+gysl-node1|10.1.1.61|Node|Docker/Kubelet/kube-proxy/flanneld/etcd
+gysl-node2|10.1.1.62|Node|Docker/Kubelet/kube-proxy/flanneld/etcd
+gysl-node3|10.1.1.63|Node|Docker/Kubelet/kube-proxy/flanneld/etcd
 
 ## 三 安装过程
 
@@ -93,7 +93,7 @@ reboot
 
 ### 3.2 安装脚本
 
-安装脚本较长，此处省略，提供日志以供参考。此脚本在Master节点执行即可，安装过程无需连接外网，安装日志如下：
+安装脚本较长，此处省略，日志以供参考，拓展思路。此脚本在Master节点执行即可，安装过程无需连接外网，安装日志如下：
 
 ```log
 Generating public/private rsa key pair.
