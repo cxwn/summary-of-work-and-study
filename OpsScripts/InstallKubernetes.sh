@@ -175,7 +175,7 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 EOF
 
-## Copy some file to node. 
+## Copy some files to node for deploying etcd cluster.  
 for node_ip in ${EtcdIP[@]}
   do  
     if [ "${node_ip}" != "${HostIP[gysl-master]}" ] ; then
@@ -458,6 +458,7 @@ cd ${WorkDir}
 # Deploy the node. 
 ## Create some temporary files for managed nodes. 
 mkdir temp
+## Create the kube-proxy configuration file.
 cat>temp/kube-proxy.conf<<EOF
 KUBE_PROXY_OPTS="--logtostderr=true \
 --v=4 \
@@ -466,6 +467,7 @@ KUBE_PROXY_OPTS="--logtostderr=true \
 --kubeconfig=${KubeConf}/kube-proxy.kubeconfig"
 EOF
 
+## Create the kube-proxy service.
 cat>temp/kube-proxy.service<<EOF
 [Unit]
 Description=Kubernetes Proxy
@@ -480,6 +482,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
+## Create the kubelet.yaml. 
 cat>temp/kubelet.yaml<<EOF
 kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
@@ -495,6 +498,7 @@ authentication:
     enabled: true
 EOF
 
+## Create the kubelet configuration file.
 cat>temp/kubelet.conf<<EOF
 KUBELET_OPTS="--logtostderr=true \
 --v=4 \
@@ -506,6 +510,7 @@ KUBELET_OPTS="--logtostderr=true \
 --pod-infra-container-image=registry.cn-hangzhou.aliyuncs.com/google-containers/pause-amd64:3.0"
 EOF
 
+## Create the kubelet service file.
 cat>temp/kubelet.service<<EOF
 [Unit]
 Description=Kubernetes Kubelet
@@ -545,6 +550,7 @@ https://${HostIP[gysl-node3]}:2379 \
 -etcd-cafile=${EtcdCA}/ca.pem -etcd-certfile=${EtcdCA}/server.pem -etcd-keyfile=${EtcdCA}/server-key.pem"
 EOF
 
+## Create the flanneld service.
 cat>/usr/lib/systemd/system/flanneld.service<<EOF
 [Unit]
 Description=Flanneld overlay address etcd agent
@@ -562,6 +568,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
+## Distribute some files to the child node. Modify some configuration files.
 for node_ip in ${HostIP[@]}
   do  
     if [ "${node_ip}" != "${HostIP[gysl-master]}" ] ;then
@@ -584,12 +591,14 @@ for node_ip in ${HostIP[@]}
 mv {${FlanneldConf},/usr/lib/systemd/system/flanneld.service} temp/
 sleep 300
 
+## Approve the nodes.
 CSRs=$(kubectl get csr | awk '{if(NR>1) print $1}')
 for csr in ${CSRs[*]}
   do
     kubectl certificate approve ${csr}
   done
 
+## Label the nodes.
 for node_ip in ${HostIP[@]}
   do  
     if [ "${node_ip}" == "${HostIP[gysl-master]}" ] ;then
