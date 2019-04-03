@@ -59,7 +59,7 @@ The host is not exist!
 ```bash
 #!/bin/bash
 Hostname=( 'host1' 'host2' 'host3' )
-PS3="Pease input the number of host: "
+PS3="Please input the number of host: "
 select host in ${Hostname[@]}; do
     case ${host} in
     'host1')
@@ -85,11 +85,11 @@ done
 1) host1
 2) host2
 3) host3
-Pease input the number of host: 1
+Please input the number of host: 1
 This host is: host1.
-Pease input the number of host: 3
+Please input the number of host: 3
 This host is: host3.
-Pease input the number of host: 4
+Please input the number of host: 4
 The host is not exist!
 ```
 
