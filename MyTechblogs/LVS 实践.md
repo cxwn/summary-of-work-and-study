@@ -218,3 +218,6 @@ cat>/var/www/html/index.html<<EOF
 EOF
 systemctl enable httpd --now
 /etc/init.d/realserver stop && /etc/init.d/realserver start
+
+https://www.cnblogs.com/edisonchou/p/4281978.html
+http://www.cnblogs.com/linkstar/p/6496477.html
