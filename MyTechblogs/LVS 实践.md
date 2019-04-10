@@ -6,8 +6,8 @@
 
 主机名|主机IP|角色|安装组件
 :-:|:-:|:-:|:-:
-gysl-lvs-master|10.1.1.51|主|keepalived
-gysl-lvs-slave|10.1.1.52|备|keepalived
+gysl-lvs-master|10.1.1.51|主|ipvsadm/keepalived
+gysl-lvs-slave|10.1.1.52|备|ipvsamd/keepalived
 gysl-web-1|10.1.1.53|Web Server|httpd
 gysl-web-2|10.1.1.54|Web Server|httpd
 gysl-web-3|10.1.1.55|Web Server|httpd
@@ -28,7 +28,9 @@ reboot
 
 ```bash
 #!/bin/bash
-yum install -y keepalived
+INTERFACE=$(ip address show|grep -E '^[[:digit:]]'|grep 'MULTICAST'|awk -F ": " '{print $2}')
+RIP=$(ip -4 -h address show|grep 'global'|grep -E -o '(([[:digit:]]{1,3})\.){3}[[:digit:]]{1,3}/'|awk -F "/" '{print $1}')
+yum -y install ipvsadm keepalived
 cat>/etc/keepalived/keepalived.conf<<EOF
 ! Configuration File for keepalived
 
