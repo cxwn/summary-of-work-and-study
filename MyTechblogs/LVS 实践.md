@@ -6,11 +6,11 @@
 
 主机名|主机IP|角色|安装组件
 :-:|:-:|:-:|:-:
-gysl-lvs-master|10.1.1.51|主|ipvsadm/keepalived
-gysl-lvs-slave|10.1.1.52|备|ipvsamd/keepalived
-gysl-web-1|10.1.1.53|Web Server|httpd
-gysl-web-2|10.1.1.54|Web Server|httpd
-gysl-web-3|10.1.1.55|Web Server|httpd
+gysl-lvs-master|172.31.2.100|主|ipvsadm/keepalived
+gysl-lvs-slave|172.31.2.99|备|ipvsamd/keepalived
+gysl-web-1|172.31.2.101|Web Server|httpd
+gysl-web-2|172.31.2.102|Web Server|httpd
+gysl-web-3|172.31.2.103|Web Server|httpd
 
 ## 三 操作过程
 
@@ -18,7 +18,7 @@ gysl-web-3|10.1.1.55|Web Server|httpd
 
 ```bash
 #!/bin/bash
-sed -i 's/SELINUX=enforcing/SELINUX=disable/g' /etc/selinux/config
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 systemctl disable firewalld
 systemctl stop firewalld
 reboot
@@ -28,8 +28,10 @@ reboot
 
 ```bash
 #!/bin/bash
+VIP=172.31.2.88
 INTERFACE=$(ip address show|grep -E '^[[:digit:]]'|grep 'MULTICAST'|awk -F ": " '{print $2}')
-RIP=$(ip -4 -h address show|grep 'global'|grep -E -o '(([[:digit:]]{1,3})\.){3}[[:digit:]]{1,3}/'|awk -F "/" '{print $1}')
+LOCAL_IP=$(ip -4 -h address show|grep 'global'|grep -E -o '(([[:digit:]]{1,3})\.){3}[[:digit:]]{1,3}/'|awk -F "/" '{print $1}')
+RIP=('172.31.2.101' '172.31.2.102' '172.31.2.103')
 yum -y install ipvsadm keepalived
 cat>/etc/keepalived/keepalived.conf<<EOF
 ! Configuration File for keepalived
@@ -40,7 +42,7 @@ global_defs {
 
 vrrp_instance VI_1 {
     state MASTER
-    interface ens33
+    interface ${INTERFACE}
     virtual_router_id 51
     priority 100
     advert_int 1
@@ -49,11 +51,11 @@ vrrp_instance VI_1 {
         auth_pass 1111
     }
     virtual_ipaddress {
-        10.1.1.50
+        ${VIP}
     }
 }
 
-virtual_server 10.1.1.50 80 {
+virtual_server ${VIP} 80 {
     delay_loop 6
     lb_algo wrr
     lb_kind DR
@@ -61,7 +63,7 @@ virtual_server 10.1.1.50 80 {
     persistence_timeout 50
     protocol TCP
 
-    real_server 10.1.1.53 80 {
+    real_server ${RIP[0]} 80 {
         weight 9
         TCP_CHECK {
             connect_timeout 3
@@ -70,7 +72,7 @@ virtual_server 10.1.1.50 80 {
             connect_port 80
         }
     }
-   real_server 10.1.1.54 80 {
+   real_server ${RIP[1]} 80 {
         weight 8
         TCP_CHECK {
             connect_timeout 3
@@ -79,7 +81,7 @@ virtual_server 10.1.1.50 80 {
             connect_port 80
         }
     }
-    real_server 10.1.1.55 80 {
+    real_server ${RIP[2]} 80 {
         weight 7
         TCP_CHECK {
             connect_timeout 3
@@ -108,7 +110,7 @@ global_defs {
 
 vrrp_instance VI_1 {
     state BACKUP
-    interface ens33
+    interface ${INTERFACE}
     virtual_router_id 51
     priority 99
     advert_int 1
@@ -117,11 +119,11 @@ vrrp_instance VI_1 {
         auth_pass 1111
     }
     virtual_ipaddress {
-        10.1.1.50
+        ${VIP}
     }
 }
 
-virtual_server 10.1.1.50 80 {
+virtual_server ${VIP} 80 {
     delay_loop 6
     lb_algo wrr
     lb_kind DR
@@ -129,7 +131,7 @@ virtual_server 10.1.1.50 80 {
     persistence_timeout 50
     protocol TCP
 
-    real_server 10.1.1.53 80 {
+    real_server ${RIP[0]} 80 {
         weight 9
         TCP_CHECK {
             connect_timeout 3
@@ -138,7 +140,7 @@ virtual_server 10.1.1.50 80 {
             connect_port 80
         }
     }
-   real_server 10.1.1.54 80 {
+   real_server ${RIP[1]} 80 {
         weight 8
         TCP_CHECK {
             connect_timeout 3
@@ -147,7 +149,7 @@ virtual_server 10.1.1.50 80 {
             connect_port 80
         }
     }
-    real_server 10.1.1.55 80 {
+    real_server ${RIP[2]} 80 {
         weight 7
         TCP_CHECK {
             connect_timeout 3
@@ -158,6 +160,7 @@ virtual_server 10.1.1.50 80 {
     }
 }
 EOF
+
 systemctl enable keepalived --now
 systemctl status keepalived
 ```
@@ -176,7 +179,7 @@ EOF
 ifdown lo
 ifup lo
 cat>/etc/init.d/realserver<<EOF
-VIP=10.1.1.50
+VIP=${VIP}
 IP=$(ip a|grep -o '10\.1\.1\.5[3-5]')
 case "\$1" in
 start)
@@ -209,11 +212,11 @@ cat>/var/www/html/index.html<<EOF
 <html lang="zh-cn">
 <head>
     <meta charset="utf-8" />
-    <title>$(ip a|grep -o '10\.1\.1\.5[3-5]')</title>
+    <title>$(ip a|grep -o '172\.31\.2\.10[1-3]')</title>
 </head>
 <body>
 <center>
-<h1>This host's IP is $(ip a|grep -o '10\.1\.1\.5[3-5]').</h1>
+<h1>This host's IP is $(ip a|grep -o '172\.31\.2\.10[1-3]').</h1>
 </center>
 </body>
 </html>
@@ -223,3 +226,11 @@ systemctl enable httpd --now
 
 https://www.cnblogs.com/edisonchou/p/4281978.html
 http://www.cnblogs.com/linkstar/p/6496477.html
+
+cat>/etc/sysctl.d/lvs-start.conf<<EOF
+net.ipv4.conf.lo.arp_ignore = 1
+net.ipv4.conf.lo.arp_announce = 2
+net.ipv4.conf.all.arp_ignore = 1
+net.ipv4.conf.all.arp_announce = 2
+EOF
+sysctl -p /etc/sysctl.d/lvs-start.conf
