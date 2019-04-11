@@ -37,34 +37,34 @@ cat>/etc/keepalived/keepalived.conf<<EOF
 ! Configuration File for keepalived
 
 global_defs {
-   router_id LVS_DEVEL
+   router_id LVS_DEVEL  # 设置lvs的id，在一个网络内应该是唯一的
 }
 
 vrrp_instance VI_1 {
-    state MASTER
+    state MASTER    # 指定Keepalived的角色，MASTER为主，BACKUP为备 
     interface ${INTERFACE}
-    virtual_router_id 51
-    priority 100
-    advert_int 1
+    virtual_router_id 51    # 虚拟路由编号，主备要一致
+    priority 100     # 定义优先级，数字越大，优先级越高，主DR必须大于备用DR  
+    advert_int 1     # 检查间隔，默认为1s
     authentication {
         auth_type PASS
         auth_pass 1111
     }
     virtual_ipaddress {
-        ${VIP}
+        ${VIP}   #  可设多个，每行一个
     }
 }
 
 virtual_server ${VIP} 80 {
-    delay_loop 6
-    lb_algo wrr
-    lb_kind DR
+    delay_loop 6  # 设置健康检查时间，单位是秒
+    lb_algo wrr  # 设置负载调度的算法
+    lb_kind DR  # 设置LVS实现负载的机制，有NAT、TUN、DR三个模式
     nat_mask 255.255.255.0
     persistence_timeout 50
     protocol TCP
 
     real_server ${RIP[0]} 80 {
-        weight 9
+        weight 9  # 配置节点权值，数字越大权重越高
         TCP_CHECK {
             connect_timeout 3
             nb_get_retry 3
@@ -167,6 +167,8 @@ systemctl status keepalived
 
 ```bash
 #!/bin/bash
+rpm -ivh http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
+yum -y install nginx
 cat>/etc/sysconfig/network-scripts/ifcfg-lo<<EOF
 DEVICE=lo
 IPADDR=10.1.1.55
@@ -208,7 +210,7 @@ esac
 exit 0
 EOF
 chmod +x /etc/init.d/realserver
-cat>/var/www/html/index.html<<EOF
+cat>/usr/share/nginx/html/index.html<<EOF
 <html lang="zh-cn">
 <head>
     <meta charset="utf-8" />
@@ -221,16 +223,16 @@ cat>/var/www/html/index.html<<EOF
 </body>
 </html>
 EOF
-systemctl enable httpd --now
+systemctl enable nginx --now
 /etc/init.d/realserver stop && /etc/init.d/realserver start
 
 https://www.cnblogs.com/edisonchou/p/4281978.html
 http://www.cnblogs.com/linkstar/p/6496477.html
 
-cat>/etc/sysctl.d/lvs-start.conf<<EOF
+cat>/etc/sysctl.d/lvs.conf<<EOF
 net.ipv4.conf.lo.arp_ignore = 1
 net.ipv4.conf.lo.arp_announce = 2
 net.ipv4.conf.all.arp_ignore = 1
 net.ipv4.conf.all.arp_announce = 2
 EOF
-sysctl -p /etc/sysctl.d/lvs-start.conf
+sysctl -p /etc/sysctl.d/lvs.conf
