@@ -39,3 +39,4 @@ Linux 的环境变量-内部字段分隔符 IFS(internal field separator) 定义
 外部传参时，从第10个参数开始，花括号不可缺少。例如：${10}。
 shift 移动传入的参数时，前面的参数会被删除，不可恢复，可以使用 shift n 指定移动的位置。
 bash shell 中的局部变量定义格式：local variable，变量前面加 local。
+```
