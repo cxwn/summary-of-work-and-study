@@ -126,7 +126,7 @@ cd ${WorkDir}
 tree ${EtcdCA}
 
 ## The etcd configuration file.
-cat>$EtcdConf/etcd.conf<<EOF
+cat>${EtcdConf}/etcd.conf<<EOF
 #[Member]
 ETCD_NAME="etcd-master"
 ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
@@ -151,7 +151,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-EnvironmentFile=$EtcdConf/etcd.conf
+EnvironmentFile=${EtcdConf}/etcd.conf
 ExecStart=${BinaryDir}/etcd \\
 --name=\${ETCD_NAME} \\
 --data-dir=\${ETCD_DATA_DIR} \\
@@ -185,8 +185,8 @@ for node_ip in ${EtcdIP[@]}
       for etcd_name in ${!EtcdIP[@]}
         do
           if [ "${node_ip}" == "${EtcdIP[${etcd_name}]}" ] ; then
-            sed -e "2s/etcd-master/${etcd_name}/g" -e "4,9s/10.1.1.60/${node_ip}/g" $EtcdConf/etcd.conf>etcd.conf
-            scp -p etcd.conf root@${node_ip}:$EtcdConf/etcd.conf
+            sed -e "2s/etcd-master/${etcd_name}/g" -e "4,9s/10.1.1.60/${node_ip}/g" ${EtcdConf}/etcd.conf>etcd.conf
+            scp -p etcd.conf root@${node_ip}:${EtcdConf}/etcd.conf
             ssh root@${node_ip} "systemctl daemon-reload && systemctl enable etcd.service --now && systemctl status etcd -l"
           fi
         done
