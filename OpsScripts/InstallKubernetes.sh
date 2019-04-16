@@ -560,7 +560,7 @@ Before=docker.service
 [Service]
 Type=notify
 EnvironmentFile=${FlanneldConf}/flanneld.conf
-ExecStart=${BinaryDir}/flanneld --ip-masq $FLANNEL_OPTIONS
+ExecStart=${BinaryDir}/flanneld --ip-masq \$FLANNEL_OPTIONS
 ExecStartPost=${BinaryDir}/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d /run/flannel/subnet.env
 Restart=on-failure
 
