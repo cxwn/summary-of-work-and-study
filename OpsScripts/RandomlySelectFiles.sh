@@ -1,5 +1,5 @@
 #!/bin/bash
-# There are many files in a directory.We need to randomly select some specified files from these files.
+# There are many files in a directory.We need to randomly select specified number of files from these files.
 src='/home/src' #The path of source files.
 dst='/home/dst' #The path of destination files.
 counter=0
