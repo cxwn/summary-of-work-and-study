@@ -1,0 +1,1 @@
+# Some things used in work or learned and summarized
