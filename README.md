@@ -4,7 +4,7 @@
 
 - image-hosting-service: 图床啦！
 
-- notes: 一些笔记。
+- notebook: 一些笔记。
 
 - ops-scripts: 很久以前写的一些运维脚本。
 
