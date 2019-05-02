@@ -1,6 +1,6 @@
 # kubernetes 权威指南企业级容器云实战
 
-1.Nginx 、HAProxy 、Traefik 的特点
+## 1. Nginx 、HAProxy 、Traefik 的特点
 
 ||<center>Nginx</center>|<center>HAProxy</center>|<center>Traefik</center>
 :-:|:-|:-|:-
@@ -9,3 +9,7 @@
 配置难易程度|简单，支持强大的正则匹配|简单|简单，与为服务架构结合最好
 负载均衡机制|一般|会话保持和健康检查机制全面|会话保持和健康检查机制全面
 社区活跃度|活跃|一般|一般
+
+## 2. DevOps 概述
+
+DevOps 强调对应用进行快速、小规模、可迭代的开发和部署，以更好地应对和满足客户的需求。它要求进行文化的转变，即将开发和运维作为一个合作的整体来看待，注重高业务价值，旨在精简整个 IT 价值链。
