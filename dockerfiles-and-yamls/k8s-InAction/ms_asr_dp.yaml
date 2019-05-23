@@ -6,10 +6,6 @@ metadata:
     app: asr
 spec:
   replicas: 8
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 25%
-    maxUnavailable: 25%
   selector:
     matchLabels:
       app: asr
