@@ -25,6 +25,7 @@ RUN apt-get update \
 # Sys::Hostname
 # Data::Dumper
 		perl \
+		python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure web servers to bind to port 80 when present
