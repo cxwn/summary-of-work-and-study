@@ -12,6 +12,8 @@ RUN apt-get update \
         libssl1.0.2 \
         libstdc++6 \
         zlib1g \
+        perl \
+        python3 \
 # MySQL client.
         mysql-client \
 # some tools
