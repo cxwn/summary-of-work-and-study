@@ -8,7 +8,7 @@
 
 操作系统版本|安装软件版本
 :-:|:-:
-CentOS Linux release 7.4.1708 (Core)|docker-ce-18.06.2.ce-3.el7
+CentOS Linux release 7.4.1708 (Core)|docker-ce-18.09.6-3.el7
 
 ## 三 操作步骤
 
@@ -37,7 +37,7 @@ cd ~
 mkdir {createrepo,docker}
 curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
 yum -y install --downloadonly --downloaddir=createrepo createrepo>&/dev/null
-yum -y install --downloadonly --downloaddir=docker docker-ce-18.06.2.ce-3.el7>&/dev/null
+yum -y install --downloadonly --downloaddir=docker docker-ce-18.09.6-3.el7>&/dev/null
 tar -cvzf pkgs.tar.gz createrepo docker>&/dev/null
 rm -rf createrepo docker
 ```
