@@ -102,4 +102,3 @@ PID   USER     TIME  COMMAND
 ```
 
 在这个容器里，我们不仅可以看到它本身的 ps aux 指令，还可以看到 nginx 容器的进程，以及 Infra 容器的 /pause 进程。这就意味着，整个 Pod 里的每个容器的进程，对于所有容器来说都是可见的：它们共享了同一个 PID Namespace。凡是 Pod 中的容器要共享宿主机的 Namespace，也一定是 Pod 级别的定义。
-
