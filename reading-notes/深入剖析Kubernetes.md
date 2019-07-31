@@ -102,3 +102,143 @@ PID   USER     TIME  COMMAND
 ```
 
 在这个容器里，我们不仅可以看到它本身的 ps aux 指令，还可以看到 nginx 容器的进程，以及 Infra 容器的 /pause 进程。这就意味着，整个 Pod 里的每个容器的进程，对于所有容器来说都是可见的：它们共享了同一个 PID Namespace。凡是 Pod 中的容器要共享宿主机的 Namespace，也一定是 Pod 级别的定义。
+
+再看一个例子：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gysl-share-namespace
+spec:
+  hostPID: true
+  hostIPC: true
+  hostNetwork: true
+  nodeName: 172.31.2.11
+  shareProcessNamespace: true
+  containers:
+  - name: nginx-gysl
+    image: nginx
+    imagePullPolicy: IfNotPresent
+  - name: busybox-gysl
+    image: busybox
+    stdin: true
+    tty: true
+    imagePullPolicy: Always
+    lifecycle:
+      postStart:
+        exec:
+          command: ['/bin/sh','-c','echo "This is a test of gysl. ">/gysl.txt']
+      preStop:
+        exec:
+          command: ['/bin/sh','-c','echo "This is a demo of gysl."']
+```
+
+上面的例子中，定义了共享宿主机的 Network、IPC 和 PID Namespace。这就意味着，这个 Pod 里的所有容器，会直接使用宿主机的网络、直接与宿主机进行 IPC 通信、看到宿主机里正在运行的所有进程。
+
+除此之外，ImagePullPolicy 和 Lifecycle 也是值得我们关注的两个字段。
+
+**ImagePullPolicy** 字段定义了镜像拉取的策略。而它之所以是一个 Container 级别的属性，是因为容器镜像本来就是 Container 定义中的一部分。ImagePullPolicy 的值默认是 Always，即每次创建 Pod 都重新拉取一次镜像。如果它的值被定义为 Never 或者 IfNotPresent，则意味着 Pod 永远不会主动拉取这个镜像，或者只在宿主机上不存在这个镜像时才拉取。
+
+**Lifecycle** 字段。它定义的是 Container Lifecycle Hooks。顾名思义，Container Lifecycle Hooks 的作用，是在容器状态发生变化时触发一系列“钩子”。在这个字段中，我们看到了 postStart 和 preStop 两个参数。postStart 参数在容器启动后，立刻执行一个指定的操作。需要明确的是，postStart 定义的操作，虽然是在 Docker 容器 ENTRYPOINT 执行之后，但它并不严格保证顺序。也就是说，在 postStart 启动时，ENTRYPOINT 有可能还没有结束。如果 postStart 执行超时或者错误，Kubernetes 会在该 Pod 的 Events 中报出该容器启动失败的错误信息，导致 Pod 也处于失败的状态。preStop 发生的时机，则是容器被杀死之前（比如，收到了 SIGKILL 信号）。而需要明确的是，preStop 操作的执行，是同步的。所以，它会阻塞当前的容器杀死流程，直到这个 Hook 定义操作完成之后，才允许容器被杀死，这跟 postStart 不一样。
+
+### 2.2 Projected Volume
+
+作为 Kubernetes 比较核心的编排对象，Pod 携带的信息极其丰富。在 Kubernetes 中，有几种特殊的 Volume，它们存在的意义不是为了存放容器里的数据，也不是用来进行容器和宿主机之间的数据交换。这些特殊 Volume 的作用，是为容器提供预先定义好的数据。从容器的角度来看，这些 Volume 里的信息就是仿佛是被 Kubernetes“投射”。Kubernetes 支持的 Projected Volume 有如下四种：
+
+- Secret
+
+- ConfigMap
+
+- DownWarAPI
+
+- ServiceAccountToken
+
+#### 2.2.1 Secret
+
+Kubernetes 把 Pod 想要访问的东西存放在 etcd 中，然后通过在 Pod 的容器里挂载 volume 的方式来进行访问。存放数据库的凭证信息就是 Secret 最典型的应用场景之一。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-gysl
+spec:
+  containers:
+  - name: secret-gysl
+    image: busybox
+    args:
+    - sleep
+    - "3600"
+    volumeMounts:
+    - name: secret-mysql-gysl
+      mountPath: "/projected-volume-secret"
+      readOnly: true
+  volumes:
+  - name: secret-mysql-gysl
+    projected:
+      sources:
+      - secret:
+          name: user
+      - secret:
+          name: passwd
+```
+
+在这个例子中，声明挂载的 Volume 的类型是 projected 类型。这个 Volume 的数据来源（sources）是名为 user 和 passwd 的 Secret 对象，分别对应的是数据库的用户名和密码。
+
+在 apply 以上 yaml 文件之后，我们会发现 Pod 的状态一直是 ContainerCreating ，原因是我们还没有创建相关的 secret 。使用以下命令进行创建：
+
+```bash
+kubectl create secret generic user --from-file=username.txt
+kubectl create secret generic passwd --from-file=passwd.txt
+```
+
+username.txt 和 passwd.txt 两个文件的内容分别如下：
+
+```txt
+cat username.txt
+gysl
+cat passwd.txt
+E#w23%dj2JK@
+```
+
+也可以通过 yaml 文件的方式来进行创建，以上命令转化为 yaml 如下：
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user
+type: Opaque
+data:
+  passwd: Z3lzbAo=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: passwd
+type: Opaque
+data:
+  passwd: RSN3MjMlZGoySktACg==
+```
+
+该yaml 文件中的 data 部分的字段都是经过 base64 转码的：
+
+```bash
+cat username.txt |base64
+Z3lzbAo=
+cat passwd.txt |base64
+RSN3MjMlZGoySktACg==
+```
+
+验证一下这些 Secret 对象是不是已经在容器里了：
+
+```bash
+kubectl exec -it secret-gysl sh
+/ # ls /projected-volume-secret/
+passwd
+/ # cat /projected-volume-secret/passwd
+E#w23%dj2JK@
+```
+
+挂载的目录才有一个文件 passwd 。这是为什么呢？
