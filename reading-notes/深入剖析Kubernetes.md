@@ -186,6 +186,8 @@ spec:
 
 在这个例子中，声明挂载的 Volume 的类型是 projected 类型。这个 Volume 的数据来源（sources）是名为 user 和 passwd 的 Secret 对象，分别对应的是数据库的用户名和密码。
 
+在编写 yaml 文件的时候需要最后几行，secret 下面依然是需要进一步缩进的。
+
 在 apply 以上 yaml 文件之后，我们会发现 Pod 的状态一直是 ContainerCreating ，原因是我们还没有创建相关的 secret 。使用以下命令进行创建：
 
 ```bash
@@ -202,6 +204,29 @@ cat passwd.txt
 E#w23%dj2JK@
 ```
 
+进入该 Pod:
+
+```bash
+kubectl exec -it secret-gysl sh
+```
+
+正常情况下，可以看到如下内容：
+
+```bash
+/ # ls -al /projected-volume-secret/
+total 0
+drwxrwxrwt    3 root     root           120 Aug  1 07:25 .
+drwxr-xr-x    1 root     root            60 Aug  1 07:25 ..
+drwxr-xr-x    2 root     root            80 Aug  1 07:25 ..2019_08_01_07_25_08.650769588
+lrwxrwxrwx    1 root     root            31 Aug  1 07:25 ..data -> ..2019_08_01_07_25_08.650769588
+lrwxrwxrwx    1 root     root            17 Aug  1 07:25 passwd.txt -> ..data/passwd.txt
+lrwxrwxrwx    1 root     root            19 Aug  1 07:25 username.txt -> ..data/username.txt
+/ # cat /projected-volume-secret/username.txt
+gysl
+/ # cat /projected-volume-secret/passwd.txt
+E#w23%dj2JK@
+```
+
 也可以通过 yaml 文件的方式来进行创建，以上命令转化为 yaml 如下：
 
 ```yaml
@@ -211,7 +236,7 @@ metadata:
   name: user
 type: Opaque
 data:
-  passwd: Z3lzbAo=
+  username.txt: Z3lzbAo=
 ---
 apiVersion: v1
 kind: Secret
@@ -219,7 +244,7 @@ metadata:
   name: passwd
 type: Opaque
 data:
-  passwd: RSN3MjMlZGoySktACg==
+  passwd.txt: RSN3MjMlZGoySktACg==
 ```
 
 该yaml 文件中的 data 部分的字段都是经过 base64 转码的：
@@ -231,14 +256,82 @@ cat passwd.txt |base64
 RSN3MjMlZGoySktACg==
 ```
 
-验证一下这些 Secret 对象是不是已经在容器里了：
+使用上面的命令进入该 Pod 我们就可以看到跟之前操作一样的内容。上面我们使用了2个 secret 对象来进行本次实验。我们能否使用一个 secret 来达到一样的目标呢？
 
-```bash
-kubectl exec -it secret-gysl sh
-/ # ls /projected-volume-secret/
-passwd
-/ # cat /projected-volume-secret/passwd
-E#w23%dj2JK@
+请看以下 yaml ：
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-gysl
+spec:
+  containers:
+  - name: secret-gysl
+    image: busybox
+    args:
+    - sleep
+    - "3600"
+    volumeMounts:
+    - name: secret-mysql-gysl
+      mountPath: "/projected-volume-secret"
+      readOnly: true
+  volumes:
+  - name: secret-mysql-gysl
+    projected:
+      sources:
+#      - secret:
+#          name: passwd
+      - secret:
+          name: secret-gysl
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-gysl
+type: Opaque
+data:
+  user: Z3lzbAo=
+  passwd: RSN3MjMlZGoySktACg==
 ```
 
-挂载的目录才有一个文件 passwd 。这是为什么呢？
+进入 Pod 观察：
+
+```bash
+/projected-volume-secret # ls -al
+total 0
+drwxrwxrwt    3 root     root           120 Aug  1 06:55 .
+drwxr-xr-x    1 root     root            60 Aug  1 06:55 ..
+drwxr-xr-x    2 root     root            80 Aug  1 06:55 ..2019_08_01_06_55_22.687706782
+lrwxrwxrwx    1 root     root            31 Aug  1 06:55 ..data -> ..2019_08_01_06_55_22.687706782
+lrwxrwxrwx    1 root     root            13 Aug  1 06:55 passwd -> ..data/passwd
+lrwxrwxrwx    1 root     root            11 Aug  1 06:55 user -> ..data/user
+```
+
+从目录结构和内容来看，差异并不大，多层软连接，一些隐藏文件。使用这样的方法创建的 secret 仅仅进行了转码，并未进行加密，生产环境中使用一般情况下需要使用加密插件。
+
+#### 2.2.2 ConfigMap
+
+ConfigMap 与 Secret 的区别在于，ConfigMap 保存的是不需要加密的、应用所需的配置信息，用法几乎与 Secret 完全相同：可以使用 kubectl create configmap 从文件或者目录创建 ConfigMap，也可以直接编写 ConfigMap 对象的 YAML 文件。我们以 kube-controller-manager.conf 文件来演示一下。
+
+创建 configMap:
+
+```bash
+ kubectl create configmap kube-scheduler --from-file=/etc/kubernetes/conf.d/kube-controller-manager.conf
+```
+
+同样，我们也可以使用 yaml 来创建：
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-controller-manager-gysl
+data:
+  kube-controller-manager.conf: |
+    KUBE_CONTROLLER_MANAGER_OPTS="--logtostderr=true --v=4 --master=127.0.0.1:8080 --leader-elect=true --address=127.0.0.1 --service-cluster-ip-range=10.0.0.0/24 --cluster-name=kubernetes --cluster-signing-cert-file=/etc/kubernetes/ca.d/ca.pem --cluster-signing-key-file=/etc/kubernetes/ca.d/ca-key.pem  --root-ca-file=/etc/kubernetes/ca.d/ca.pem --service-account-private-key-file=/etc/kubernetes/ca.d/ca-key.pem"
+```
+
+就这样，kube-controller-manager.conf 配置文件的内容就被保存到了 kube-controller-manager-gysl 这个ConfigMap 中。
+
+#### 2.2.3 Downward API
