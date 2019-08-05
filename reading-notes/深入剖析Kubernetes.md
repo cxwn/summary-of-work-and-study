@@ -335,3 +335,39 @@ data:
 就这样，kube-controller-manager.conf 配置文件的内容就被保存到了 kube-controller-manager-gysl 这个ConfigMap 中。
 
 #### 2.2.3 Downward API
+
+Downward API 能让 Pod 里的容器能够直接获取到这个 Pod API 对象本身的信息。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downward-api-gysl
+  labels:
+    zone: south
+    cluster: gysl
+    rack: rack-01
+spec:
+  containers:
+    - name: busybox
+      image: busybox
+      command: ['sh','-c']
+      args:
+      - while true;do
+          if [[ -e /etc/pondinfo/labels ]];then echo -ne '\n\n';cat /etc/podinfo/labels;fi;sleep 3;done;
+      volumeMounts:
+        - name: podinfo
+          mountPath: /etc/podinfo
+          readOnly: false
+  volumes:
+    - name: podinfo
+      projected:
+        sources:
+        - downwardAPI:
+            items:
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+```
+
+Pod 的 Labels 字段的值，就会被 Kubernetes 自动挂载成为容器里的 /etc/podinfo/labels 文件。
