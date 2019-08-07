@@ -344,17 +344,20 @@ kind: Pod
 metadata:
   name: downward-api-gysl
   labels:
-    zone: south
-    cluster: gysl
-    rack: rack-01
+    zone: beijing
+    cluster: gysl-cluster1
+    rack: rack-gysl
 spec:
   containers:
-    - name: busybox
+    - name: client-container
       image: busybox
-      command: ['sh','-c']
+      command: ["sh", "-c"]
       args:
-      - while true;do
-          if [[ -e /etc/pondinfo/labels ]];then echo -ne '\n\n';cat /etc/podinfo/labels;fi;sleep 3;done;
+      - while true; do
+          if [[ -e /etc/podinfo/labels ]]; then
+            echo -en '\n\n'; cat /etc/podinfo/labels; fi;
+          sleep 5;
+        done;
       volumeMounts:
         - name: podinfo
           mountPath: /etc/podinfo
@@ -370,4 +373,70 @@ spec:
                   fieldPath: metadata.labels
 ```
 
-Pod 的 Labels 字段的值，就会被 Kubernetes 自动挂载成为容器里的 /etc/podinfo/labels 文件。
+Pod 的 Labels 字段的值，就会被 Kubernetes 自动挂载成为容器里的 /etc/podinfo/labels 文件。执行命令：
+
+```bash
+kubectl logs downward-api-gysl
+```
+
+看到的结果：
+
+```text
+
+cluster="gysl-cluster1"
+rack="rack-gysl"
+zone="beijing"
+
+cluster="gysl-cluster1"
+rack="rack-gysl"
+zone="beijing"
+
+cluster="gysl-cluster1"
+rack="rack-gysl"
+zone="beijing"
+```
+
+Downward API 支持的字段已经非常丰富，比如：
+
+```text
+1. 使用 fieldRef 可以声明使用:
+spec.nodeName - 宿主机名字
+status.hostIP - 宿主机 IP
+metadata.name - Pod 的名字
+metadata.namespace - Pod 的 Namespace
+status.podIP - Pod 的 IP
+spec.serviceAccountName - Pod 的 Service Account 的名字
+metadata.uid - Pod 的 UID
+metadata.labels['<KEY>'] - 指定 <KEY> 的 Label 值
+metadata.annotations['<KEY>'] - 指定 <KEY> 的 Annotation 值
+metadata.labels - Pod 的所有 Label
+metadata.annotations - Pod 的所有 Annotation
+
+2. 使用 resourceFieldRef 可以声明使用:
+容器的 CPU limit
+容器的 CPU request
+容器的 memory limit
+容器的 memory request
+```
+
+Downward API 能够获取到的信息，一定是 Pod 里的容器进程启动之前就能够确定下来的信息。而如果你想要获取 Pod 容器运行后才会出现的信息。比如，容器进程的 PID，那就肯定不能使用 Downward API 了，而应该考虑在 Pod 里定义一个 sidecar 容器。
+
+#### 2.2.4 Service Account  
+
+Service Account 对象的作用，就是 Kubernetes 系统内置的一种“服务账户”，它是 Kubernetes 进行权限分配的对象。比如，Service Account A，可以只被允许对 Kubernetes API 进行 GET 操作，而 Service Account B，则可以有 Kubernetes API 的所有操作的权限。
+
+像这样的 Service Account 的授权信息和文件，实际上保存在它所绑定的一个特殊的 Secret 对象里的。这个特殊的 Secret 对象，就叫作ServiceAccountToken。任何运行在 Kubernetes 集群上的应用，都必须使用这个 ServiceAccountToken 里保存的授权信息，也就是 Token，才可以合法地访问 API Server。
+
+因此，Kubernetes 项目的 Projected Volume 其实只有三种，因为第四种 ServiceAccountToken，只是一种特殊的 Secret 而已。
+
+为了方便使用，Kubernetes 已经为你提供了一个的默认“服务账户”（default Service Account）。并且，任何一个运行在 Kubernetes 里的 Pod，都可以直接使用这个默认的 Service Account，而无需显示地声明挂载它。Kubernetes 在每个 Pod 创建的时候，自动在它的 spec.volumes 部分添加上了默认 ServiceAccountToken 的定义，然后自动给每个容器加上了对应的 volumeMounts 字段。这个过程对于用户来说是完全透明的。一旦 Pod 创建完成，容器里的应用就可以直接从这个默认 ServiceAccountToken 的挂载目录里访问到授权信息和文件。这个容器内的路径在 Kubernetes 里是固定的，即：/var/run/secrets/kubernetes.io/serviceaccount。
+
+```bash
+$ kubectl exec -it downward-api-gysl sh
+/ # ls /var/run/secrets/kubernetes.io/serviceaccount
+ca.crt     namespace  token
+```
+
+这种把 Kubernetes 客户端以容器的方式运行在集群里，然后使用 default Service Account 自动授权的方式，被称作“InClusterConfig”，也是我最推荐的进行 Kubernetes API 编程的授权方式。
+
+考虑到自动挂载默认 ServiceAccountToken 的潜在风险，Kubernetes 允许你设置默认不为 Pod 里的容器自动挂载这个 Volume。
