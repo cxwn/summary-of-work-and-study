@@ -440,3 +440,87 @@ ca.crt     namespace  token
 这种把 Kubernetes 客户端以容器的方式运行在集群里，然后使用 default Service Account 自动授权的方式，被称作“InClusterConfig”，也是我最推荐的进行 Kubernetes API 编程的授权方式。
 
 考虑到自动挂载默认 ServiceAccountToken 的潜在风险，Kubernetes 允许你设置默认不为 Pod 里的容器自动挂载这个 Volume。
+
+## 二 Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-gysl
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app-1: nginx
+      app-2: busybox
+  template:
+    metadata:
+      labels:
+        app-1: nginx
+        app-2: busybox
+    spec:
+      containers:
+        - name: app-1
+          image: nginx:1.16.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+            - containerPort: 8080
+        - name: app-2
+          image: busybox
+          imagePullPolicy: Never
+          command: ['/bin/sh', '-c']
+          args:
+            - while :;do sleep 20;done
+```
+
+这是一个编排得非常简单的 Deployment，确保携带 app-1=nginx 和 app-2=busybox 标签的 Pod 的个数等于 spec.replicas 指定的总数 2 个。也就是说在这个 Deployment 的 Pod 数量大等于2时，就会有 Pod 被删除，反之则会有 Pod 被创建。
+
+这个 Deployment 由2个部分构成，例子中的  yaml 第1-10行定义了 Deployment 控制器，第10行以后的内容则定义了被控制的 Pod ,template 后面这一部分我们会发现跟之前的 Pod 定义大同小异。
+
+此处顺便提一条命令(更新 Deployment 的镜像)：
+
+```bash
+kubectl set image deployment/deployment-gysl app-1=nginx:latest
+```
+
+这个命令还可以更新以下对象：
+
+```text
+  env            Update environment variables on a pod template
+  image          更新一个 pod template 的镜像
+  resources      在对象的 pod templates 上更新资源的 requests/limits
+  selector       设置 resource 的 selector
+  serviceaccount Update ServiceAccount of a resource
+  subject        Update User, Group or ServiceAccount in a RoleBinding/ClusterRoleBinding
+```
+
+## 三 ReplicaSet
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: replica-set-gysl
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+```
+
+一个 ReplicaSet 对象就是由副本数目的定义和一个 Pod 模板组成的, 它的定义就是 Deployment 的一个子集。Deployment 控制器实际操纵的是 ReplicaSet 对象，而不是 Pod 对象。
+
+ReplicaSet 负责通过“控制器模式”，保证系统中 Pod 的个数永远等于指定的个数（比如，3 个）。这也正是 Deployment 只允许容器的 restartPolicy=Always 的主要原因：只有在容器能保证自己始终是 Running 状态的前提下，ReplicaSet 调整 Pod 的个数才有意义。
+
+Deployment 通过“控制器模式”，来操作 ReplicaSet 的个数和属性，进而实现“水平扩展 / 收缩”和“滚动更新”这两个编排动作。
