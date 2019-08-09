@@ -567,7 +567,7 @@ metadata:
   labels:
     web-server: web-server
 spec:
-  serviceName: "nginx"
+  serviceName: "gysl-stateful-set-svc"
   replicas: 2
   selector:
     matchLabels:
