@@ -545,15 +545,15 @@ StatefulSet 的核心功能，就是通过某种方式记录这些状态，然�
 apiVersion: v1
 kind: Service
 metadata:
-  name: gysl-stateful-set-svc
+  name: nginx
   labels:
-    web-svc: nginx
+    app: nginx
 spec:
   selector:
     app: nginx
   ports:
     - port: 80
-      name: web-svc
+      name: web
   clusterIP: None
 ```
 
@@ -563,18 +563,15 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: web-server-gysl
-  labels:
-    web-server: web-server
+  name: web
 spec:
-  serviceName: "gysl-stateful-set-svc"
+  serviceName: "nginx"
   replicas: 2
   selector:
     matchLabels:
       app: nginx
   template:
     metadata:
-      name: web-server-gysl
       labels:
         app: nginx
     spec:
@@ -586,4 +583,12 @@ spec:
           ports:
             - containerPort: 80
               name: web-port
+```
+
+关于服务发现的官方文档：
+
+<https://github.com/kubernetes/dns/blob/master/docs/specification.md>
+
+```dockerfile
+FROM alpine:
 ```
