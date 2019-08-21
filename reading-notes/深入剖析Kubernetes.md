@@ -655,4 +655,39 @@ nginx        ClusterIP   None         <none>        80/TCP    43m   app=nginx
 ### 4.3 存储结构
 
 ```yaml
-apiVersio
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-pvc-gysl
+spec:
+  replicas: 2
+  serviceName: "gysl-web"
+  selector:
+    matchLabels:
+      app: pod-gysl
+  template:
+    metadata:
+      name: web-pod
+      labels:
+        app: pod-gysl
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: web-port
+              containerPort: 80
+          volumeMounts:
+            - name: www-vct
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: www-vct
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+```
