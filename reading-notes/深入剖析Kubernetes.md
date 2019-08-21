@@ -527,6 +527,8 @@ Deployment 通过“控制器模式”，来操作 ReplicaSet 的个数和属性
 
 ## 四 StatefulSet
 
+### 4.1 背景知识及相关概念
+
 StatefulSet 的设计其实非常容易理解。它把真实世界里的应用状态，抽象为了两种情况：
 
 拓扑状态。这种情况意味着，应用的多个实例之间不是完全对等的关系。这些应用实例，必须按照某些顺序启动，比如应用的主节点 A 要先于从节点 B 启动。而如果你把 A 和 B 两个 Pod 删除掉，它们再次被创建出来时也必须严格按照这个顺序才行。并且，新创建出来的 Pod，必须和原来 Pod 的网络标识一样，这样原先的访问者才能使用同样的方法，访问到这个新 Pod。
@@ -537,9 +539,13 @@ StatefulSet 的核心功能，就是通过某种方式记录这些状态，然�
 
 这个 Service 又是如何被访问的呢？
 
-第一种方式，是以 Service 的 VIP（Virtual IP，即：虚拟 IP）方式。比如：当我访问 10.0.23.1 这个 Service 的 IP 地址时，10.0.23.1 其实就是一个 VIP，它会把请求转发到该 Service 所代理的某一个 Pod 上。这里的具体原理，我会在后续的 Service 章节中进行详细介绍。
+第一种方式，是以 Service 的 VIP（Virtual IP，即：虚拟 IP）方式。比如：当我访问 172.20.25.3 这个 Service 的 IP 地址时，172.20.25.3 其实就是一个 VIP，它会把请求转发到该 Service 所代理的某一个 Pod 上。
 
 第二种方式，就是以 Service 的 DNS 方式。比如：这时候，只要我访问“my-svc.my-namespace.svc.cluster.local”这条 DNS 记录，就可以访问到名叫 my-svc 的 Service 所代理的某一个 Pod。
+
+### 4.2 拓扑结构
+
+让我们来看一下以下例子：
 
 ```yaml
 apiVersion: v1
@@ -563,7 +569,9 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: web
+  name: web-server-gysl
+  labels:
+    app: nginx
 spec:
   serviceName: "nginx"
   replicas: 2
@@ -585,10 +593,66 @@ spec:
               name: web-port
 ```
 
-关于服务发现的官方文档：
+这些 Pod 的创建，也是严格按照编号顺序进行的。比如，在 web-server-gysl-0 进入到 Running 状态、并且细分状态（Conditions）成为 Ready 之前，web-server-gysl-1 会一直处于 Pending 状态。
 
-<https://github.com/kubernetes/dns/blob/master/docs/specification.md>
+使用以下命令测试：
 
-```dockerfile
-FROM alpine:
+```bash
+kubectl run -i --tty  --image toolkit:v1.0.0821 dns-test --restart=Never --rm /bin/bash
 ```
+
+```bash
+[root@dns-test /]# nslookup web-server-gysl-0.nginx
+Server:         10.0.0.2
+Address:        10.0.0.2#53
+
+Name:   web-server-gysl-0.nginx.default.svc.cluster.local
+Address: 172.20.25.3
+
+[root@dns-test /]# nslookup web-server-gysl-1.nginx
+Server:         10.0.0.2
+Address:        10.0.0.2#53
+
+Name:   web-server-gysl-1.nginx.default.svc.cluster.local
+Address: 172.20.72.7
+
+[root@dns-test /]# nslookup nginx
+Server:         10.0.0.2
+Address:        10.0.0.2#53
+
+Name:   nginx.default.svc.cluster.local
+Address: 172.20.72.7
+Name:   nginx.default.svc.cluster.local
+Address: 172.20.25.3
+```
+
+由于最近版本的 busybox 有坑，我自己制作了一个 DNS 测试工具，Dockerfile 如下：
+
+```Dockerfile
+FROM centos:7.6.1810
+RUN  yum -y install bind-utils
+CMD  ["/bin/bash","-c","while true;do sleep 60000;done"]
+```
+
+回到 Master 节点看一下：
+
+```bash
+$ kubectl get pod -o wide
+NAME                READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+web-server-gysl-0   1/1     Running   0          43m   172.20.25.3   172.31.2.12   <none>           <none>
+web-server-gysl-1   1/1     Running   0          42m   172.20.72.7   172.31.2.11   <none>           <none>
+$ kubectl get svc -o wide
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+nginx        ClusterIP   None         <none>        80/TCP    43m   app=nginx
+```
+
+当我们在集群内部分别 ping 域名 web-server-gysl-0.nginx.default.svc.cluster.local 和 web-server-gysl-1.nginx.default.svc.cluster.local 时，正常返回了对应的 Pod IP， 在 ping 域名 nginx.default.svc.cluster.local 时，则随机返回2个 Pod IP 中的一个。完全印证了上文所述内容。
+
+在上述操作过程中，我随机删除了这些 Pod 中的某一个或几个，稍后再次来查看的时候，新创建的 Pod 依然按照之前的编号进行了编排。
+
+此外，我将 StatefulSet 的一个 Pod 所在的集群内节点下线，再次查看 Pod 的情况，系统在其他节点上以原 Pod 的名称迅速创建了新的 Pod。编号都是从 0 开始累加，与 StatefulSet 的每个 Pod 实例一一对应，绝不重复。
+
+### 4.3 存储结构
+
+```yaml
+apiVersio
