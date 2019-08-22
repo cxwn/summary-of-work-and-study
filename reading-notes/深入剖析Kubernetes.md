@@ -655,6 +655,64 @@ nginx        ClusterIP   None         <none>        80/TCP    43m   app=nginx
 ### 4.3 存储结构
 
 ```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-gysl
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  rbd:
+    monitors:
+      - '172.31.2.11:6789'
+      - '172.31.2.12:6789'
+    pool: data
+    image: data
+    fsType: xfs
+    readOnly: true
+    user: admin
+    keyring: /etc/ceph/keyrin
+```
+
+---
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nfs-gysl
+  labels:
+    environment: test
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: managed-nfs-storage
+  mountOptions:
+    - hard
+    - nfsver=4.1
+  nfs:
+    path: /data
+    server: 172.31.2.10
+```
+
+```yaml
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: managed-nfs-storage
+provisioner: fuseim.pri/ifs
+```
+
+---
+
+```yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -684,10 +742,13 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: www-vct
+        annotations:
+          volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 1Gi
+        storageClassName: managed-nfs-storage
 ```
