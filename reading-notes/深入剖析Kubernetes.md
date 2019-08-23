@@ -654,6 +654,8 @@ nginx        ClusterIP   None         <none>        80/TCP    43m   app=nginx
 
 ### 4.3 存储结构
 
+由于测试环境资源有限，原计划使用 rook-ceph 来进行实验的，无奈使用 NFS 来进行实验。 Ceph 创建 PV 的相关 yaml 如下：
+
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
@@ -678,13 +680,13 @@ spec:
     keyring: /etc/ceph/keyrin
 ```
 
----
+NFS 实验相关 yaml:
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv-nfs-gysl
+  name: pv-nfs-gysl-0
   labels:
     environment: test
 spec:
@@ -693,26 +695,34 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Recycle
-  storageClassName: managed-nfs-storage
-  mountOptions:
-    - hard
-    - nfsver=4.1
+  storageClassName: nfs
   nfs:
-    path: /data
+    path: /data-0
     server: 172.31.2.10
-```
-
-```yaml
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nfs-gysl-1
+  labels:
+    environment: test
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: nfs
+  nfs:
+    path: /data-1
+    server: 172.31.2.10
+---
 apiVersion: storage.k8s.io/v1beta1
 kind: StorageClass
 metadata:
-  name: managed-nfs-storage
+  name: nfs
 provisioner: fuseim.pri/ifs
-```
-
 ---
-
-```yaml
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -743,12 +753,91 @@ spec:
     - metadata:
         name: www-vct
         annotations:
-          volume.beta.kubernetes.io/storage-class: "managed-nfs-storage"
+          volume.beta.kubernetes.io/storage-class: "nfs"
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 1Gi
-        storageClassName: managed-nfs-storage
+        storageClassName: nfs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gysl-web
+spec:
+  type: NodePort
+  selector:
+    app: pod-gysl
+  ports:
+    - name: web-svc
+      protocol: TCP
+      nodePort: 31688
+      port: 8080
+      targetPort: 80
+```
+
+通过以下命令向相关 Pod 写入验证内容：
+
+```bash
+for node in 0 1;do kubectl exec statefulset-pvc-gysl-$node -- sh -c "echo \<h1\>Node: ${node}\</h1\>>/usr/share/nginx/html/index.html";done
+```
+
+观察实验结果：
+
+```bash
+$ kubectl get pod -o wide
+NAME                     READY   STATUS    RESTARTS   AGE   IP            NODE          NOMINATED NODE   READINESS GATES
+statefulset-pvc-gysl-0   1/1     Running   0          51m   172.20.85.2   172.31.2.11   <none>           <none>
+statefulset-pvc-gysl-1   1/1     Running   0          32m   172.20.65.4   172.31.2.12   <none>           <none>
+$ kubectl get pvc
+NAME                             STATUS   VOLUME          CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+www-vct-statefulset-pvc-gysl-0   Bound    pv-nfs-gysl-0   1Gi        RWO            nfs            51m
+www-vct-statefulset-pvc-gysl-1   Bound    pv-nfs-gysl-1   1Gi        RWO            nfs            49m
+$ kubectl get pv
+NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                                    STORAGECLASS   REASON   AGE
+pv-nfs-gysl-0   1Gi        RWO            Recycle          Bound    default/www-vct-statefulset-pvc-gysl-0   nfs                     51m
+pv-nfs-gysl-1   1Gi        RWO            Recycle          Bound    default/www-vct-statefulset-pvc-gysl-1   nfs                     51m
+$ cat /data-0/index.html
+<h1>Node: 0</h1>
+$ cat /data-1/index.html
+<h1>Node: 1</h1>
+$ curl 172.31.2.11:31688
+<h1>Node: 0</h1>
+$ curl 172.31.2.11:31688
+<h1>Node: 1</h1>
+$ curl 172.31.2.12:31688
+<h1>Node: 1</h1>
+$ curl 172.31.2.12:31688
+<h1>Node: 0</h1>
+```
+
+从实验结果中我们可以看出 Pod 与 PV、PVC 的对应关系，结合上文中的 yaml 我们不难发现：
+
+1. Pod 与对应的 PV 存储是一一对应的，在创 Pod 的同时， StatefulSet根据对应的规创建了相应的 PVC，PVC 选择符合条件的 PV 进绑定。
+
+---
+
+```bash
+kubectl run -i --tty  --image toolkit:v1.0.0821 test --restart=Never --rm /bin/bash
+```
+
+```text
+[root@test /]# curl statefulset-pvc-gysl-0.gysl-web
+<h1>Node: 0</h1>
+[root@test /]# curl statefulset-pvc-gysl-0.gysl-web
+<h1>Node: 0</h1>
+[root@test /]# curl statefulset-pvc-gysl-1.gysl-web
+<h1>Node: 1</h1>
+[root@test /]# curl statefulset-pvc-gysl-1.gysl-web
+<h1>Node: 1</h1>
+[root@test /]# curl gysl-web:8080
+<h1>Node: 1</h1>
+[root@test /]# curl gysl-web:8080
+<h1>Node: 1</h1>
+[root@test /]# curl gysl-web:8080
+<h1>Node: 0</h1>
+[root@test /]# curl gysl-web:8080
+<h1>Node: 0</h1>
 ```
