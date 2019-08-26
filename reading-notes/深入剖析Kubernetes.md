@@ -813,10 +813,6 @@ $ curl 172.31.2.12:31688
 <h1>Node: 0</h1>
 ```
 
-从实验结果中我们可以看出 Pod 与 PV、PVC 的对应关系，结合上文中的 yaml 我们不难发现：
-
-1. Pod 与对应的 PV 存储是一一对应的，在创 Pod 的同时， StatefulSet根据对应的规创建了相应的 PVC，PVC 选择符合条件的 PV 进绑定。
-
 ---
 
 ```bash
@@ -841,3 +837,12 @@ kubectl run -i --tty  --image toolkit:v1.0.0821 test --restart=Never --rm /bin/b
 [root@test /]# curl gysl-web:8080
 <h1>Node: 0</h1>
 ```
+
+从实验结果中我们可以看出 Pod 与 PV、PVC 的对应关系，结合上文中的 yaml 我们不难发现：
+
+1. Pod 与对应的 PV 存储是一一对应的，在创 Pod 的同时， StatefulSet根据对应的规创建了相应的 PVC，PVC 选择符合条件的 PV 进绑定。当 Pod 被删除之后，数据依然保存在 PV 中，当被删除的 Pod 再次被创建时， 该 Pod 依然会立即与原来的 Pod 进行绑定，保持原有的对应关系。
+
+2. 在集群内部，可以通过 pod 名加对应的服务名访问指定的 Pod 及其绑定的 PV。 如果通过服务名来访问 StatefulSet ，那么服务名的功能类似于 VIP 的功能。
+
+### 4.4 StatefulSet 实践
+
