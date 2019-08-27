@@ -846,3 +846,91 @@ kubectl run -i --tty  --image toolkit:v1.0.0821 test --restart=Never --rm /bin/b
 
 ### 4.4 StatefulSet 实践
 
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+data:
+  master.cnf: |
+    [mysqld]
+    log-bin
+  slave.cnf: |
+    [mysql]
+    super-read-only
+```
+
+---
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - name: mysql
+      port: 3306
+      clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-read
+  labels:
+    app: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - name: mysql
+      port: 3306
+```
+
+---
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  replicas: 3
+  selector:
+  matchLabels:
+    labels:
+      app: mysql
+  serviceName: mysql
+  template:
+    metadata:
+      name: mysql
+      labels:
+        app: mysql
+    spec:
+      initContainers:
+        - name: init-mysql
+        - name: clone-mysql
+      containers:
+        - name: mysql
+        - name: xtrabackup
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: config-map
+          configMap:
+            name: mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+```
