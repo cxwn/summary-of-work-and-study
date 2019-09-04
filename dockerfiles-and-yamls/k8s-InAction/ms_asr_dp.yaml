@@ -54,6 +54,8 @@ spec:
         volumeMounts:
         - name: asr-volume
           mountPath: /home/henlin/SpeechHost
+        - name: timezone
+          mountPath: /etc/localtime
         ports:
         - containerPort: 34932
           protocol: TCP
@@ -66,3 +68,6 @@ spec:
       - name: asr-volume
         persistentVolumeClaim:
           claimName: asr-pvc
+      - name: timezone
+        hostPath:
+          path: /etc/localtime
