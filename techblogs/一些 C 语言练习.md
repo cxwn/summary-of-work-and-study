@@ -71,3 +71,57 @@ int main(int argc, char *argv[])
   return 0;
 }
 ```
+
+---
+
+## 3. 运算符优先级
+
+```c
+#include<stdio.h>
+
+int main(int argc,char *argv[])
+{
+  int a = 5, b, c;
+  c = (b = a + 2) - (a=1);
+  printf("%d\t%d\n",c,a);
+  return 0;
+}
+
+// 6       1
+```
+
+---
+
+## 4. for 语句里面的逗号运算符
+
+```c
+#include<stdio.h>
+
+int main(int argc,char *argv[])
+{
+  int a = 15, b = 26, i, j;
+  for ( ; i < a, j < b;i++, j++)
+  {}
+  printf("%d\t%d\n",i,j);
+  return 0;
+}
+// 26      26
+```
+
+---
+
+```c
+#include<stdio.h>
+
+int main(int argc,char *argv[])
+{
+  int a = 15, b = 6, i, j;
+  for ( ; i < a, j < b;i++, j++)
+  {}
+  printf("%d\t%d\n",i,j);
+  return 0;
+}
+// 6       6
+```
+
+这种情况以后一个变量的值为上限。
