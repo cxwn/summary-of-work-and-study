@@ -503,4 +503,323 @@ void test(){
 
 代码是合法的。如果去掉关键字 extern， 那么第二个打印的值将是0。
 
-## 13.
+## 13. 指针的赋值与使用
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int i = 10, j, *p, *q, *x = &i;
+  p = &i;
+  q = p;
+  j = *&i;
+  printf("p = %d\n",*p);
+  printf("q = %d\n",*q);
+  printf("x = %d\n",*x);
+  printf("j = %d\n",j);
+  scanf("%d",&i);
+  printf("p = %d\n",*p);
+  printf("q = %d\n",*q);
+  printf("x = %d\n",*x);
+  printf("j = %d\n",j);
+  return 0;
+}
+/*
+p = 10
+q = 10
+x = 10
+j = 10
+98
+p = 98
+q = 98
+x = 98
+j = 10
+*/
+```
+
+这个例子种，指针变量 x 在声明的同时进行了初始化工作，这种操作是合法的。在声明之后再进行初始化则需要以类似于指针变量 p 的方式进行初始化，仍然使用 *p = &i 这种声明方式是无法通过编译的。
+
+通过 *p 这种方式使用指针值叫做间接寻址。此处的 \* 称之为间接寻址运算符。
+
+多个指针变量指向同一变量时，该变量的值改变之后，指针变量的值也随之改变。
+
+*&i 对变量 i 使用 & 运算符产生指向指针变量的指针，对指针使用 \* 运算符则可以返回到原始变量。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int *p, *q, i = 989, j = 2019;
+  p = &i;
+  q = &j;
+  q = p;
+  printf("p = %d\n",*p);
+  printf("p : %p\n",p);
+  printf("j = %d\n",j);
+  printf("q = %d\n",*q);
+  printf("q : %p\n",q);
+  return 0;
+}
+/*
+p = 989
+p : 0x7fff51751e5c
+j = 2019
+q = 989
+q : 0x7fff51751e5c
+*/
+```
+
+同类型的指针变量可以相互复制，复制之后指向同一变量。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int *p, *q, i = 989, j = 2019;
+  p = &i;
+  q = &j;
+  *q = *p;
+  printf("p = %d\n",*p);
+  printf("p : %p\n",p);
+  printf("j = %d\n",j);
+  printf("q = %d\n",*q);
+  printf("q : %p\n",q);
+  return 0;
+}
+/*
+p = 989
+p : 0x7ffc00d359ac
+j = 989
+q = 989
+q : 0x7ffc00d359a8
+*/
+```
+
+这段代码看起来跟上一段十分相似，但是运行结果却截然不同。赋值语句 *q = *p 把指针变量 p 的值复制到 q 指向的对象中,也就是 j 中，但是 p 和 q 的地址是不一样的。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  char i, *p;
+  p = &i;
+  scanf("%c",p);
+  printf("p = %c\n",*p);
+  printf("i = %c\n",i);
+  return 0;
+}
+/*
+e
+p = e
+i = e
+*/
+
+在这一段代码中，如果删除 “p = &i;” 这一句，那么这段代码是不能顺利通过编译的，函数 scanf() 中的 变量 p 就相当于 &i， scanf() 读入的字符并存储于 i 中。此时，scanf() 中不能再使用运算符 &。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int a, b;
+  int *max(int *,int *);
+  scanf("%d%d",&a,&b);
+  printf("The max number is: %d\n",*max(&a,&b));
+  return 0;
+}
+
+int *max(int *a, int *b){
+  *a = *a + 5;
+  if (*a > *b)
+    return a;
+  else
+    return b;
+}
+/*
+1 4
+The max number is: 6
+*/
+```
+
+指针变量作为形参进行传递、运算，并函数的返回值类型为指针。再继续看下一段代码：
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int a, b;
+  int max(int *,int *);
+  scanf("%d%d",&a,&b);
+  printf("The max number is: %d\n",max(&a,&b));
+  return 0;
+}
+
+int max(int *a, int *b){
+  *a = *a + 5;
+  if (*a > *b)
+    return *a;
+  else
+    return *b;
+}
+/*
+1 4
+The max number is: 6
+*/
+```
+
+同样的输入，一样的输出结果，形式不一样，实际上实现原理也是一样的，都返回指针，可以类比来理解。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int x = 2019, y=2023;
+  int *a = &x, *b = &y, c;
+  c = (*a + *b) * 2 + 20;
+  printf("Sum: %d\n",c);
+  return 0;
+}
+// Sum: 8104
+```
+
+以上代码的第4行和第5行互换，将不能通过编译。C 语言严格遵循先声明后使用的原则，指针也不例外。间接寻址在表达式中是可以直接使用的。需要说明的是：“int 、\*a = &x, \*b = &y, c;”这一行中的 \* 不是间接寻址运算符，其作用是告知编译器 a 和 b 是两个指向 int 类型变量的指针。 “c = (\*a + \*b) \* 2 + 20;”这一行的前两个 \* 是间接寻址运算符，第三个 \* 是乘法运算符。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(int *);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(int *p){
+  int a = 10086;
+  printf("The original value is: %d\n",*p);
+  p = &a;
+  return *p;
+}
+```
+
+---
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(int *);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(int *p){
+  printf("The original value is: %d\n",*p);
+  *p = 10086;
+  return *p;
+}
+```
+
+---
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(const int *);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(const int *p){
+  int x = 10086;
+  printf("The original value is: %d\n",*p);
+  p = &x;
+  return *p;
+}
+/*
+98
+The original value is: 98
+10086
+*/
+```
+
+以上三段代码编译执行后均能得到一致的结果,但是如下代码却不能通过编译：
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(const int *);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(const int *p){
+  printf("The original value is: %d\n",*p);
+  *p = 10086;
+  return *p;
+}
+```
+
+这说明使用了 const 关键字之后，不能改变指针指向的整数，但是能改变指针自身。因为实参是按值进行传递的，所以通过指针指向其他地方的方法给 p 赋新值不会对函数外部产生任何影响。在声明时，关键字 const 是不能省略的。继续看下面的代码。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(int * const);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(int * const p){
+  printf("The original value is: %d\n",*p);
+  *p = 10086;
+  // int x = 10086;
+  // p = &x;
+  return *p;
+}
+/*
+98
+The original value is: 98
+10086
+*/
+```
+
+本段代码中，如果取消注释部分，则不能通过编译。在此处，可以改变指针指向的整数，但是不能改变改变指针自身。进一步尝试：
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv){
+  int p;
+  int example(const int * const);
+  scanf("%d",&p);
+  printf("%d\n",example(&p));
+  return 0;
+}
+
+int example(const int * const p){
+  printf("The original value is: %d\n",*p);
+  // *p = 10086;
+  // int x = 10086;
+  // p = &x;
+  return *p;
+}
+/*
+98
+The original value is: 98
+98
+*/
+```
+
+本段代码中出现了两个 const 关键字。代码中被注释的3行，取消任意一部分均不能通过编译。这种情况说明：通过这种声明之后，既不能改变指针指向的整数，也不能改变指针自身。不过这种情况比较少见。
