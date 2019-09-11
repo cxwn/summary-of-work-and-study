@@ -508,7 +508,7 @@ void test(){
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int i = 10, j, *p, *q, *x = &i;
   p = &i;
   q = p;
@@ -548,7 +548,7 @@ j = 10
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int *p, *q, i = 989, j = 2019;
   p = &i;
   q = &j;
@@ -574,7 +574,7 @@ q : 0x7fff51751e5c
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int *p, *q, i = 989, j = 2019;
   p = &i;
   q = &j;
@@ -600,7 +600,7 @@ q : 0x7ffc00d359a8
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   char i, *p;
   p = &i;
   scanf("%c",p);
@@ -619,7 +619,7 @@ i = e
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int a, b;
   int *max(int *,int *);
   scanf("%d%d",&a,&b);
@@ -645,7 +645,7 @@ The max number is: 6
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int a, b;
   int max(int *,int *);
   scanf("%d%d",&a,&b);
@@ -671,7 +671,7 @@ The max number is: 6
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int x = 2019, y=2023;
   int *a = &x, *b = &y, c;
   c = (*a + *b) * 2 + 20;
@@ -681,12 +681,12 @@ int main(int argc,char *argv){
 // Sum: 8104
 ```
 
-以上代码的第4行和第5行互换，将不能通过编译。C 语言严格遵循先声明后使用的原则，指针也不例外。间接寻址在表达式中是可以直接使用的。需要说明的是：“int 、\*a = &x, \*b = &y, c;”这一行中的 \* 不是间接寻址运算符，其作用是告知编译器 a 和 b 是两个指向 int 类型变量的指针。 “c = (\*a + \*b) \* 2 + 20;”这一行的前两个 \* 是间接寻址运算符，第三个 \* 是乘法运算符。
+以上代码的第4行和第5行互换，将不能通过编译。C 语言严格遵循先声明后使用的原则，指针也不例外。间接寻址在表达式中是可以直接使用的。需要说明的是：“int \*a = &x, \*b = &y, c;”这一行中的 \* 不是间接寻址运算符，其作用是告知编译器 a 和 b 是两个指向 int 类型变量的指针。 “c = (\*a + \*b) \* 2 + 20;”这一行的前两个 \* 是间接寻址运算符，第三个 \* 是乘法运算符。
 
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(int *);
   scanf("%d",&p);
@@ -707,7 +707,7 @@ int example(int *p){
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(int *);
   scanf("%d",&p);
@@ -727,7 +727,7 @@ int example(int *p){
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(const int *);
   scanf("%d",&p);
@@ -753,7 +753,7 @@ The original value is: 98
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(const int *);
   scanf("%d",&p);
@@ -773,7 +773,7 @@ int example(const int *p){
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(int * const);
   scanf("%d",&p);
@@ -800,7 +800,7 @@ The original value is: 98
 ```c
 # include<stdio.h>
 
-int main(int argc,char *argv){
+int main(int argc,char *argv[]){
   int p;
   int example(const int * const);
   scanf("%d",&p);
