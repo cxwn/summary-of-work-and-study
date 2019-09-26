@@ -56,17 +56,20 @@ Length of the str11: 4
 
 例子中使用的编译器能够进行数组下标检查。例如：“char str7[4] = "gysl\0"”是无法通过编译的。该编译器的版本是：gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-36)。
 
+### 2.2 字符数组与字符指针
+
 ```c
 # include<stdio.h>
 # include<string.h>
 
-int main(int argc,char *argv[]){
+int main(int argc, char *argv[]){
   char *a = "My name is ivan.";
   for (int i = 0; i < strlen(a); a++)
     printf("%c",*a);
   printf("\n");
   return 0;
 }
+// My name is ivan.
 ```
 
 ```c
@@ -108,4 +111,75 @@ int main(int argc,char *argv[]){
 // n
 ```
 
+以上四个例子展示字符指针的几种遍历方式，通过这些例子，我们可以看出字符数组和字符指针在一些场景下是可以互换的。
+
+### 2.3 字符串的输入
+
 ```c
+# include<stdio.h>
+
+int main(int argc,char *argv[]){
+  char str[10] = {'M', 'y', 'n', 'a', 'm', 'i', 's', 'i', 'v', 'a'};
+  scanf("%s",str);
+  printf("%s\n",str);
+  return 0;
+}
+```
+
+字符串的输入依然可以使用 scanf() 函数进行输入，并且无需使用 & 运算符。此时被输入的字符串是数组名，编译器把它传给函数时会当作指针来处理。scanf() 会跳过空白字符，遇到空白字符即终止输入。
+
+使用 gets() 来测试输入功能时，会出现以下提示：
+
+```text
+any_test.c:5:3: 警告：不建议使用‘gets’(声明于 /usr/include/stdio.h:638)
+```
+
+既然直接使用 scanf() 和 gets() 函数来输入字符串都有缺陷，那么使用 scanf() 函数逐个字符输入字符串试试看：
+
+```c
+# include<stdio.h>
+# define LENGTH 16
+
+int main(int argc,char *argv[]){
+  char str[LENGTH + 1];
+  for ( int i = 0; i < LENGTH; i++)
+    scanf("%c",&str[i]);
+  str[LENGTH] = '\0';
+  printf("%s\n",str);
+  return 0;
+}
+/*
+my name is ivan.
+my name is ivan.
+*/
+```
+
+“str[LENGTH] = '\0';”这一行不能省略。printf() 函数会逐个写字符串中的字符，直到遇到 '\0' 为止，如果省略了 '\0'，printf() 将不知道字符串何时结束，会越过字符串末尾继续写，直到在内存的某个地方找到 '\0' 为止。具体我们可以删除这一行代码看一下效果。
+
+### 2.4 使用字符串库函数
+
+```c
+# include<stdio.h>
+# include<string.h>
+
+int main(int argc,char *argv[]){
+  char str1[100] = "My name is ivan.", str2[] = " My blog is ivandu.blog.csdn.net";
+  strcat(str1,str2);
+  printf("%s\n",str1);
+  return 0;
+}
+// My name is ivan. My blog is ivandu.blog.csdn.net
+```
+
+与 strcpy() 函数类似，使用 strcat() 函数时，str1 的长度必须比 str2 大，且 str1 的长度必须明确。
+
+```c
+# include<stdio.h>
+
+int main(int argc,char *argv[]){
+  char str1[] = "my computer is good.\n\0";
+  printf(str1);
+  return 0;
+}
+//my computer is good.
+```
