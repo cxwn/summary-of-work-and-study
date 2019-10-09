@@ -175,11 +175,17 @@ int main(int argc,char *argv[]){
 
 ```c
 # include<stdio.h>
+# include<string.h>
 
 int main(int argc,char *argv[]){
-  char str1[] = "my computer is good.\n\0";
-  printf(str1);
+  char str[] = "My name is Ivan. \nMy computer is good.\n\0";
+  printf(str);
+  printf("%d\n",strlen(str));
   return 0;
 }
-//my computer is good.
+/*
+My name is Ivan.
+My computer is good.
+39
+*/
 ```
