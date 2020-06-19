@@ -162,3 +162,6 @@ demo                1.0                  af331209572f        38 minutes ago     
 - 4.3 [GitHub 官方仓库](https://github.com/docker-library/redis)
 - 4.4 [10 Docker Security Best Practices](https://snyk.io/blog/10-docker-image-security-best-practices)
 - 4.5 [Best practices for writing Dockerfiles](https://docs.docker.com/develop/develop-images/dockerfile_best-practices)
+
+
+onlineasr/{apache-tomcat,redis,decoder,nginx,jmeter}
