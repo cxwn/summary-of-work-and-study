@@ -7,3 +7,6 @@
    - 如果存在多个 WORKDIR ，Doceker 容器运行时则以最后一个 WORKDIR 指定的目录为当前工作目录。
    - WORKDIR 指令指定的目录不能以“~”代替HOME目录。
    - 在 Docke 镜像的构建过程中，可以通过指定的 WORKDIR 随时切换工作目录。
+
+3. AGR
+   - ARG 
