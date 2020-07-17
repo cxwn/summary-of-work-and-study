@@ -1,5 +1,5 @@
 #!/bin/bash
-UserName='gysl'
+UserName='cmos'
 PassWord='drh123'
 # Install the Docker engine. This needs to be executed on every machine.
 curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
@@ -16,7 +16,7 @@ if [ $? -eq 0 ] ;
                       docker-engine-selinux \
                       docker-engine>&/dev/null
         yum list docker-ce --showduplicates|grep "^doc"|sort -r
-        yum -y install docker-ce-18.09.3-3.el7
+        yum -y install docker-ce-19.03.8-3.el7
         rm -f /etc/yum.repos.d/docker-ce.repo
         systemctl enable docker --now && systemctl status docker
     else
@@ -52,3 +52,4 @@ echo $PassWord|passwd $UserName --stdin
 usermod $UserName -aG docker  
 # Reboot the machine.  
 reboot
+
