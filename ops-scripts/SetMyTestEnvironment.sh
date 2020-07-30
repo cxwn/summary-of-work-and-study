@@ -1,5 +1,5 @@
 #!/bin/bash
-UserName='cmos'
+UserName='ivandu'
 PassWord='drh123'
 # Install the Docker engine. This needs to be executed on every machine.
 curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
@@ -28,7 +28,7 @@ cat>/etc/sysctl.d/docker.conf<<EOF
 net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
-EOF 
+EOF
 sysctl -p /etc/sysctl.d/docker.conf>&/dev/null 
 # Turn off and disable the firewalld.  
 systemctl stop firewalld  
@@ -38,7 +38,7 @@ sed -i.bak 's/=enforcing/=disabled/' /etc/selinux/config
 # Disable the swap.  
 sed -i.bak 's/^.*swap/#&/g' /etc/fstab
 # Install EPEL/vim/git.  
-yum -y install epel-release vim git tree
+yum -y install epel-release vim git tree python3
 yum repolist
 # Alias vim. 
 cat>/etc/profile.d/vim.sh<<EOF

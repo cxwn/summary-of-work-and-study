@@ -11,3 +11,5 @@
 - techblogs: 技术博客。
 
 - tetx-processing: 文本处理相关的一些 python 脚本。
+
+- tools: 一些工具或工具下载地址。

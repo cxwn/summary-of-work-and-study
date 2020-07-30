@@ -3,11 +3,10 @@
 # hostnamectl set-hostname kube-node-02 --static
 # hostnamectl set-hostname kube-node-03 --static
 
-UserName='cmos'
-PassWord='drh123'
-useradd $UserName
-echo $PassWord|passwd $UserName --stdin
-usermod $UserName -aG docker  
+# sudo rm -rf /etc/yum.repos.d/kubernetes.repo /etc/yum.repos.d/docker-ce.repo 
+
+UserName='ivandu'
+PassWord='drh123' 
 
 systemctl disable firewalld && systemctl stop firewalld
 
@@ -16,12 +15,11 @@ sed -i 's/SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
 
 curl http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo>&/dev/null
 
+# Install the docker-ce.
 yum -y install docker-ce-19.03.8-3.el7
 
-# Restart and enable Docker.
-systemctl enable docker --now && systemctl status docker
-
 # Set up the Docker daemon
+mkdir /etc/docker
 cat > /etc/docker/daemon.json <<EOF
 {
   "registry-mirrors": ["https://o1rsgg9k.mirror.aliyuncs.com"],
@@ -37,6 +35,9 @@ cat > /etc/docker/daemon.json <<EOF
 }
 EOF
 
+# Restart and enable Docker.
+systemctl daemon-reload && systemctl enable docker --now && systemctl status docker
+
 # Set up required sysctl params, these persist across reboots.
 cat > /etc/sysctl.d/kubernetes.conf <<EOF
 net.bridge.bridge-nf-call-iptables  = 1
@@ -45,13 +46,17 @@ net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 sysctl --system
 
-# Restart Docker
-systemctl daemon-reload && systemctl restart docker && systemctl status docker
-
 # Show Docker info.
 docker info
 
-cat>/etc/yum.repos.d/kubernetes.repo<<EOF
+# Create user.
+useradd $UserName
+echo $PassWord|passwd $UserName --stdin
+usermod $UserName -aG docker
+sed -i "/^root/a $UserName\tALL=(ALL)\tNOPASSWD:ALL" /etc/sudoers
+
+# Install kubernetes repo.
+cat > /etc/yum.repos.d/kubernetes.repo<<EOF
 [kubernetes]
 name=Kubernetes
 baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
@@ -62,19 +67,22 @@ gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
        http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
 EOF
 
+# Install kubeadm.
 yum install -y kubectl-1.18.4-0
 yum install -y kubelet-1.18.4-0
 yum install -y kubeadm-1.18.4-0
 
+systemctl enable kubelet --now && systemctl status kubelet
+# Add hostname.
 echo -e "10.1.1.10   kube-master\n10.1.1.11   kube-node-01\n10.1.1.12   kube-node-02\n10.1.1.13   kube-node-03">>/etc/hosts
 
 # kubeadm init --config=kubeadm-config.yaml --upload-certs
 # kubeadm config images list --kubernetes-version=v1.18.4
 
-kubeadm init --kubernetes-version=v1.18.4 --service-cidr=10.11.0.0/16 --pod-network-cidr=10.88.0.0/16
+kubeadm init --kubernetes-version=v1.18.4 --service-cidr=10.66.0.0/16 --pod-network-cidr=10.88.0.0/16
 
-kubeadm join 10.1.1.10:6443 --token 5c5wqn.uec79f6y2197eum7 \
-    --discovery-token-ca-cert-hash sha256:f8c842b7fdc42f23dd0d6967fd7ec6a3224c102b92529748a54e425611c662e8
+kubeadm join 10.1.1.10:6443 --token o0dxqp.diclvv1do89yxpyt \
+    --discovery-token-ca-cert-hash sha256:a6ab1796916849e5f9d43b02010679679e141b55f957db2578b706a918ba6c35 
 
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -203,9 +211,6 @@ kubectl label node kube-master  node-role.kubernetes.io/master='master'
 kubectl label node kube-node-01 node-role.kubernetes.io/node='node'
 kubectl label node kube-node-02  node-role.kubernetes.io/node='node'
 kubectl label node kube-node-03  node-role.kubernetes.io/node='node'
-
-
-sed -i "/^root/a cmos\tALL=(ALL)\tNOPASSWD:ALL" /etc/sudoers
 
 # kubectl taint nodes --all node-role.kubernetes.io/master-
 
