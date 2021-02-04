@@ -1,8 +1,8 @@
 # Git的常规使用
 
 
-git config user.name "杜睿鸿"
-git config user.email "duruihong@cmos.chinamobile.com"
+git config user.name "name"
+git config user.email "demo@hotmail.com"
 
 git checkout master
 git checkout -b release # 创建新分支并切换到新分支
@@ -10,6 +10,8 @@ git checkout -b develop
 git checkout -b feature
 git push origin feature
 git branch --set-upstream-to=origin/feature
+
+git config --global credential.helper store
 
 ## 删除分支
 
